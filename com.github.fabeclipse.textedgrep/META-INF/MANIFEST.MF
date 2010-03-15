@@ -1,6 +1,6 @@
 Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
-Bundle-Name: Grep for text editor
+Bundle-Name: Grep for TextEditor
 Bundle-SymbolicName: com.github.fabeclipse.textedgrep
 Bundle-Version: 1.0.0.qualifier
 Bundle-Vendor: Fabrizio Iannetti
