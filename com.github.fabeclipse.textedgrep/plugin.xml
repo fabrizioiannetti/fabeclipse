@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<plugin>
+   <extension
+         point="org.eclipse.ui.commands">
+      <category
+            id="com.github.fabeclipse.textedgrep.commands.category"
+            name="Sample Category">
+      </category>
+      <command
+            categoryId="com.github.fabeclipse.textedgrep.commands.category"
+            id="com.github.fabeclipse.textedgrep.commands.sampleCommand"
+            name="Sample Command">
+      </command>
+   </extension>
+   <extension
+         point="org.eclipse.ui.handlers">
+      <handler
+            class="com.github.fabeclipse.textedgrep.handlers.SampleHandler"
+            commandId="com.github.fabeclipse.textedgrep.commands.sampleCommand">
+      </handler>
+   </extension>
+   <extension
+         point="org.eclipse.ui.bindings">
+      <key
+            commandId="com.github.fabeclipse.textedgrep.commands.sampleCommand"
+            contextId="org.eclipse.ui.contexts.window"
+            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
+            sequence="M1+6">
+      </key>
+   </extension>
+   <extension
+         point="org.eclipse.ui.menus">
+      <menuContribution
+            locationURI="menu:org.eclipse.ui.main.menu?after=additions">
+         <menu
+               id="com.github.fabeclipse.textedgrep.menus.sampleMenu"
+               label="Sample Menu"
+               mnemonic="M">
+            <command
+                  commandId="com.github.fabeclipse.textedgrep.commands.sampleCommand"
+                  id="com.github.fabeclipse.textedgrep.menus.sampleCommand"
+                  mnemonic="S">
+            </command>
+         </menu>
+      </menuContribution>
+      <menuContribution
+            locationURI="toolbar:org.eclipse.ui.main.toolbar?after=additions">
+         <toolbar
+               id="com.github.fabeclipse.textedgrep.toolbars.sampleToolbar">
+            <command
+                  commandId="com.github.fabeclipse.textedgrep.commands.sampleCommand"
+                  icon="icons/sample.gif"
+                  id="com.github.fabeclipse.textedgrep.toolbars.sampleCommand"
+                  tooltip="Say hello world">
+            </command>
+         </toolbar>
+      </menuContribution>
+   </extension>
+   <extension
+         point="org.eclipse.ui.views">
+      <category
+            id="com.github.fabeclipse.textedgrep.fabeclipse"
+            name="FabEclipse">
+      </category>
+      <view
+            category="com.github.fabeclipse.textedgrep.fabeclipse"
+            class="com.github.fabeclipse.textedgrep.views.GrepView"
+            id="com.github.fabeclipse.textedgrep.grepview"
+            name="Grep"
+            restorable="true">
+      </view>
+   </extension>
+
+</plugin>
