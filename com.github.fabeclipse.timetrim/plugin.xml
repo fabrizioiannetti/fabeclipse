@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<plugin>
+   <extension
+         point="org.eclipse.ui.menus">
+      <menuContribution
+            allPopups="false"
+            locationURI="toolbar:org.eclipse.ui.trim.status">
+         <toolbar
+               id="com.github.fabeclipse.timetrim.timeTool"
+               label="TimeTool">
+            <control
+                  class="com.github.fabeclipse.timetrim.TimeToolWorkbenchWindowControl">
+            </control>
+         </toolbar>
+      </menuContribution>
+   </extension>
+
+</plugin>
