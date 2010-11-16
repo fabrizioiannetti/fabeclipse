@@ -5,12 +5,12 @@
       version="1.0.0.qualifier"
       provider-name="Fabrizio Iannetti">
 
-   <description url="http://www.example.com/description">
-      [Enter Feature Description here.]
+   <description url="https://github.com/fabrizioiannetti/fabeclipse">
+      Add a Grep View that filters the current text editor content
    </description>
 
-   <copyright url="http://www.example.com/copyright">
-      [Enter Copyright Description here.]
+   <copyright>
+      Fabrizio Iannetti.
    </copyright>
 
    <license url="http://www.example.com/license">
