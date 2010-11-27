@@ -131,6 +131,8 @@ public class GrepView extends ViewPart {
 			}
 		});
 		getViewSite().getActionBars().updateActionBars();
+
+		getViewSite().getService(getClass());
 	}
 
 	private void doGrep(final Text regexpText) {

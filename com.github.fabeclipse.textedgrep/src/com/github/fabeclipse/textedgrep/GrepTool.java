@@ -28,7 +28,12 @@ public class GrepTool {
 		}
 		
 		public int getOriginalLine(int grepLine) {
-			int originalLine = lineMap[grepLine];
+			int originalLine = 0;
+			// if the grep context is empty, it is
+			// OK to ask for line 0 even if it 
+			// is beyond the array size
+			if (numGrepLines > 0)
+				originalLine = lineMap[grepLine];
 			return originalLine;
 		}
 		
@@ -41,7 +46,12 @@ public class GrepTool {
 		}
 		
 		public int getMaxOriginalLine() {
-			return lineMap[numGrepLines - 1];
+			// if the grep context is empty
+			// return 0 as max line
+			if (numGrepLines > 0)
+				return lineMap[numGrepLines - 1];
+			else
+				return 0;
 		}
 		
 	}
@@ -98,7 +108,8 @@ public class GrepTool {
 				lineNum++;
 			}
 			// remove trailing newline
-			grep.deleteCharAt(grep.length()-1);
+			if (grep.length() > 0)
+				grep.deleteCharAt(grep.length()-1);
 			grepContext = new GrepContext(document, grep, lineMap, grepLineNum);
 		}
 		return grepContext;
