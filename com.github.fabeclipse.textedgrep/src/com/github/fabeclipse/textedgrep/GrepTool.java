@@ -20,10 +20,14 @@ public class GrepTool {
 		private final IDocument document;
 		private final StringBuilder grep;
 		private final int numGrepLines;
-		public GrepContext(IDocument document, StringBuilder grep, int[] lineMap, int numGrepLines) {
+		private final int[] matchBegin;
+		private final int[] matchEnd;
+		public GrepContext(IDocument document, StringBuilder grep, int[] lineMap, int[] matchBegin, int[] matchEnd, int numGrepLines) {
 			this.document = document;
 			this.grep = grep;
 			this.lineMap = lineMap;
+			this.matchBegin = matchBegin;
+			this.matchEnd = matchEnd;
 			this.numGrepLines = numGrepLines;
 		}
 		
@@ -35,6 +39,14 @@ public class GrepTool {
 			if (numGrepLines > 0)
 				originalLine = lineMap[grepLine];
 			return originalLine;
+		}
+		
+		public int getMatchBeginForGrepLine(int grepLine) {
+			return matchBegin[grepLine];
+		}
+		
+		public int getMatchEndForGrepLine(int grepLine) {
+			return matchEnd[grepLine];
 		}
 		
 		public String getText() {
@@ -79,6 +91,8 @@ public class GrepTool {
 		GrepContext grepContext = null;
 		// start with 10 thousands lines (in the grep result)
 		int[] lineMap = new int[10000];
+		int[] matchBegin = new int[10000];
+		int[] matchEnd = new int[10000];
 		StringBuilder grep = new StringBuilder();
 		IEditorPart activeEditor = window.getActivePage().getActiveEditor();
 		if (activeEditor instanceof AbstractTextEditor) {
@@ -102,7 +116,16 @@ public class GrepTool {
 						int[] newLineMap = new int[lineMap.length + 10000];
 						System.arraycopy(lineMap, 0, newLineMap, 0, lineMap.length);
 						lineMap = newLineMap;
+						// resize match boundaries accordingly
+						int[] newMatchBegin = new int[lineMap.length];
+						System.arraycopy(matchBegin, 0, newMatchBegin, 0, lineMap.length);
+						matchBegin = newMatchBegin;
+						int[] newMatchEnd = new int[lineMap.length];
+						System.arraycopy(matchEnd, 0, newMatchEnd, 0, lineMap.length);
+						matchEnd = newMatchEnd;
 					}
+					matchBegin[grepLineNum] = matcher.start();
+					matchEnd[grepLineNum] = matcher.end();
 					lineMap[grepLineNum++] = lineNum;
 				}
 				lineNum++;
@@ -110,7 +133,7 @@ public class GrepTool {
 			// remove trailing newline
 			if (grep.length() > 0)
 				grep.deleteCharAt(grep.length()-1);
-			grepContext = new GrepContext(document, grep, lineMap, grepLineNum);
+			grepContext = new GrepContext(document, grep, lineMap, matchBegin, matchEnd, grepLineNum);
 		}
 		return grepContext;
 	}

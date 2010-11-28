@@ -14,6 +14,7 @@ import org.eclipse.jface.text.source.SourceViewer;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.CaretEvent;
 import org.eclipse.swt.custom.CaretListener;
+import org.eclipse.swt.custom.StyleRange;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.graphics.Color;
@@ -146,6 +147,25 @@ public class GrepView extends ViewPart {
 		grepContext = grepTool.grepCurrentEditor(window);
 		String grep = grepContext.getText();
 		document.set(grep);
+		int lines = document.getNumberOfLines();
+		try {
+			int[] ranges = new int[lines*2];
+			StyleRange[] styles = new StyleRange[lines];
+			// this same style range object is used for all matches
+			// to save some memory, the real ranges are
+			// in the integer arrays
+			StyleRange matchHighLightStyle = new StyleRange();
+			matchHighLightStyle.background = viewer.getTextWidget().getDisplay().getSystemColor(SWT.COLOR_YELLOW);
+			for (int i = 0 ; i < lines ; i++) {
+				ranges[i*2]     = document.getLineOffset(i) + grepContext.getMatchBeginForGrepLine(i);
+				ranges[i*2 + 1] = grepContext.getMatchEndForGrepLine(i) - grepContext.getMatchBeginForGrepLine(i);
+				styles[i]       = matchHighLightStyle;
+			}
+			viewer.getTextWidget().setStyleRanges(ranges, styles);
+		} catch (BadLocationException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 	@Override
