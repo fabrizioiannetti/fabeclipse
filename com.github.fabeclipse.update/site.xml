@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <site>
-   <feature url="features/com.github.fabeclipse.textedgrep_feature_1.0.0.201011271500.jar" id="com.github.fabeclipse.textedgrep_feature" version="1.0.0.201011271500">
+   <feature url="features/com.github.fabeclipse.textedgrep_feature_1.0.0.201011281642.jar" id="com.github.fabeclipse.textedgrep_feature" version="1.0.0.201011281642">
       <category name="com.github.fabeclipse.update"/>
    </feature>
    <category-def name="com.github.fabeclipse.update" label="Fabeclipse">
