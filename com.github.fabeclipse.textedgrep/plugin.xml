@@ -15,5 +15,28 @@
             restorable="true">
       </view>
    </extension>
+   <extension
+         point="org.eclipse.ui.commands">
+      <category
+            id="com.github.fabeclipse.textedgrep.grepCommands"
+            name="GrepCommands">
+      </category>
+      <command
+            categoryId="org.eclipse.ui.category.textEditor"
+            defaultHandler="com.github.fabeclipse.textedgrep.handlers.GrepCommand"
+            description="Open/Go to grep view"
+            id="com.github.fabeclipse.textedgrep.OpenGrep"
+            name="Grep Text">
+      </command>
+   </extension>
+   <extension
+         point="org.eclipse.ui.bindings">
+      <key
+            commandId="com.github.fabeclipse.textedgrep.OpenGrep"
+            contextId="org.eclipse.ui.textEditorScope"
+            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
+            sequence="M1+M3+G">
+      </key>
+   </extension>
 
 </plugin>

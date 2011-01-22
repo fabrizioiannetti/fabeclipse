@@ -36,6 +36,8 @@ import com.github.fabeclipse.textedgrep.GrepTool.GrepContext;
 
 public class GrepView extends ViewPart {
 
+	public static final String VIEW_ID = "com.github.fabeclipse.textedgrep.grepview";
+	
 	private IDocument document = new Document();
 	private TextViewer viewer;
 	private String lastRegex;
@@ -44,6 +46,8 @@ public class GrepView extends ViewPart {
 	private AbstractTextEditor textEd;
 	private Color highlightColor;
 
+	private Text regexpText;
+
 	@Override
 	public void createPartControl(Composite parent) {
 		GridLayout layout = new GridLayout(1, false);
@@ -51,8 +55,7 @@ public class GrepView extends ViewPart {
 		layout.marginHeight = 0;
 		layout.marginWidth = 0;
 
-		// add a text box for the regular expression
-		final Text regexpText = new Text(parent, SWT.SINGLE);
+		regexpText = new Text(parent, SWT.SINGLE);
 		regexpText.setLayoutData(new GridData(SWT.FILL, SWT.BEGINNING, true, false));
 		regexpText.setText(lastRegex);
 		
@@ -170,7 +173,7 @@ public class GrepView extends ViewPart {
 
 	@Override
 	public void setFocus() {
-		viewer.getControl().setFocus();
+		regexpText.setFocus();
 	}
 
 	@Override
