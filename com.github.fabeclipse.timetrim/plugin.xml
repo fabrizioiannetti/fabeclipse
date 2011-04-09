@@ -12,8 +12,21 @@
             <control
                   class="com.github.fabeclipse.timetrim.TimeToolWorkbenchWindowControl">
             </control>
+            <command
+                  commandId="com.github.fabeclipse.timetrim.dateDropDown"
+                  label="date"
+                  style="pulldown">
+            </command>
          </toolbar>
       </menuContribution>
+   </extension>
+   <extension
+         point="org.eclipse.ui.commands">
+      <command
+            defaultHandler="com.github.fabeclipse.timetrim.DateDropDown"
+            id="com.github.fabeclipse.timetrim.dateDropDown"
+            name="date">
+      </command>
    </extension>
 
 </plugin>

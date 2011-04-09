@@ -6,4 +6,5 @@ Bundle-Version: 1.0.0.qualifier
 Bundle-Vendor: Fabrizio
 Bundle-RequiredExecutionEnvironment: JavaSE-1.6
 Require-Bundle: org.eclipse.ui;bundle-version="3.6.0",
- org.eclipse.ui.workbench.texteditor;bundle-version="3.6.0"
+ org.eclipse.ui.workbench.texteditor;bundle-version="3.6.0",
+ org.eclipse.nebula.widgets.calendarcombo;bundle-version="1.0.0"
