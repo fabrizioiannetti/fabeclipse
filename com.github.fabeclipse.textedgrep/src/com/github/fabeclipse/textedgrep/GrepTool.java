@@ -5,9 +5,9 @@ import java.util.Scanner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.eclipse.jface.text.DocumentEvent;
+//import org.eclipse.jface.text.DocumentEvent;
 import org.eclipse.jface.text.IDocument;
-import org.eclipse.jface.text.IDocumentListener;
+//import org.eclipse.jface.text.IDocumentListener;
 import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.IEditorPart;
 import org.eclipse.ui.IWorkbenchWindow;
@@ -70,17 +70,17 @@ public class GrepTool {
 
 	private String regex;
 
-	private static IDocumentListener listener = new IDocumentListener() {
-		@Override
-		public void documentChanged(DocumentEvent event) {
-			System.out.println(event);
-		}
-		
-		@Override
-		public void documentAboutToBeChanged(DocumentEvent event) {
-			System.out.println(event);
-		}
-	};
+//	private static IDocumentListener listener = new IDocumentListener() {
+//		@Override
+//		public void documentChanged(DocumentEvent event) {
+//			System.out.println(event);
+//		}
+//		
+//		@Override
+//		public void documentAboutToBeChanged(DocumentEvent event) {
+//			System.out.println(event);
+//		}
+//	};
 	
 	public GrepTool(String regex) {
 		super();
@@ -100,7 +100,7 @@ public class GrepTool {
 			IEditorInput input = textEd.getEditorInput();
 			IDocument document = textEd.getDocumentProvider().getDocument(input);
 			String string = document.get();
-			document.addDocumentListener(listener );
+//			document.addDocumentListener(listener );
 			
 			Scanner s = new Scanner(string);
 			Matcher matcher = Pattern.compile(regex).matcher("");

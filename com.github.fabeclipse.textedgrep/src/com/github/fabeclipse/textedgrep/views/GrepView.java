@@ -28,9 +28,11 @@ import org.eclipse.ui.IMemento;
 import org.eclipse.ui.IPartListener2;
 import org.eclipse.ui.IPartService;
 import org.eclipse.ui.IViewSite;
+import org.eclipse.ui.IWorkbenchPart;
 import org.eclipse.ui.IWorkbenchPartReference;
 import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.PartInitException;
+import org.eclipse.ui.part.EditorPart;
 import org.eclipse.ui.part.ViewPart;
 import org.eclipse.ui.texteditor.AbstractTextEditor;
 
@@ -85,7 +87,6 @@ public class GrepView extends ViewPart {
 		
 		@Override
 		public void partClosed(IWorkbenchPartReference partRef) {
-			System.out.println("closed: " + partRef.getPartName());
 		}
 		
 		@Override
@@ -96,7 +97,11 @@ public class GrepView extends ViewPart {
 		
 		@Override
 		public void partActivated(IWorkbenchPartReference partRef) {
-			System.out.println("activated: " + partRef.getPartName());
+			IWorkbenchPart part = partRef.getPart(false);
+			if (part instanceof EditorPart) {
+				// ok, it's a non null editor, grep it
+				doGrep(regexpText);
+			}
 		}
 	};
 
