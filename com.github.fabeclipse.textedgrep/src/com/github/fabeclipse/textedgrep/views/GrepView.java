@@ -25,7 +25,10 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Text;
 import org.eclipse.ui.IEditorPart;
 import org.eclipse.ui.IMemento;
+import org.eclipse.ui.IPartListener2;
+import org.eclipse.ui.IPartService;
 import org.eclipse.ui.IViewSite;
+import org.eclipse.ui.IWorkbenchPartReference;
 import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.part.ViewPart;
@@ -47,6 +50,55 @@ public class GrepView extends ViewPart {
 	private Color highlightColor;
 
 	private Text regexpText;
+
+	private final IPartListener2 partListener = new IPartListener2() {
+		
+		@Override
+		public void partVisible(IWorkbenchPartReference partRef) {
+			// TODO Auto-generated method stub
+			
+		}
+		
+		@Override
+		public void partOpened(IWorkbenchPartReference partRef) {
+			// TODO Auto-generated method stub
+			
+		}
+		
+		@Override
+		public void partInputChanged(IWorkbenchPartReference partRef) {
+			// TODO Auto-generated method stub
+			
+		}
+		
+		@Override
+		public void partHidden(IWorkbenchPartReference partRef) {
+			// TODO Auto-generated method stub
+			
+		}
+		
+		@Override
+		public void partDeactivated(IWorkbenchPartReference partRef) {
+			// TODO Auto-generated method stub
+			
+		}
+		
+		@Override
+		public void partClosed(IWorkbenchPartReference partRef) {
+			System.out.println("closed: " + partRef.getPartName());
+		}
+		
+		@Override
+		public void partBroughtToTop(IWorkbenchPartReference partRef) {
+			// TODO Auto-generated method stub
+			
+		}
+		
+		@Override
+		public void partActivated(IWorkbenchPartReference partRef) {
+			System.out.println("activated: " + partRef.getPartName());
+		}
+	};
 
 	@Override
 	public void createPartControl(Composite parent) {
@@ -136,7 +188,8 @@ public class GrepView extends ViewPart {
 		});
 		getViewSite().getActionBars().updateActionBars();
 
-		getViewSite().getService(getClass());
+		IPartService partService = (IPartService) getViewSite().getService(IPartService.class);
+		partService.addPartListener(partListener);
 	}
 
 	private void doGrep(final Text regexpText) {
