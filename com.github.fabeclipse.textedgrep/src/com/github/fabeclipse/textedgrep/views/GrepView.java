@@ -98,12 +98,14 @@ public class GrepView extends ViewPart {
 		@Override
 		public void partActivated(IWorkbenchPartReference partRef) {
 			IWorkbenchPart part = partRef.getPart(false);
-			if (part instanceof EditorPart) {
+			if (linkToEditorAction.isChecked() && part instanceof EditorPart) {
 				// ok, it's a non null editor, grep it
 				doGrep(regexpText);
 			}
 		}
 	};
+
+	private Action linkToEditorAction;
 
 	@Override
 	public void createPartControl(Composite parent) {
@@ -191,6 +193,9 @@ public class GrepView extends ViewPart {
 				doGrep(regexpText);
 			}
 		});
+		linkToEditorAction = new Action("Link To Editor",Action.AS_CHECK_BOX) {};
+		menuManager.add(linkToEditorAction);
+
 		getViewSite().getActionBars().updateActionBars();
 
 		IPartService partService = (IPartService) getViewSite().getService(IPartService.class);
