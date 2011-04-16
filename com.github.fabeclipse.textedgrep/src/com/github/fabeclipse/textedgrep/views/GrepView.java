@@ -2,6 +2,7 @@ package com.github.fabeclipse.textedgrep.views;
 
 import org.eclipse.jface.action.Action;
 import org.eclipse.jface.action.IMenuManager;
+import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.resource.JFaceResources;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.CursorLinePainter;
@@ -36,9 +37,16 @@ import org.eclipse.ui.part.EditorPart;
 import org.eclipse.ui.part.ViewPart;
 import org.eclipse.ui.texteditor.AbstractTextEditor;
 
+import com.github.fabeclipse.textedgrep.Activator;
 import com.github.fabeclipse.textedgrep.GrepTool;
 import com.github.fabeclipse.textedgrep.GrepTool.GrepContext;
 
+/**
+ * View to show the result of a grep operation on the
+ * content of an editor.
+ * 
+ * @author fabrizio iannetti
+ */
 public class GrepView extends ViewPart {
 
 	public static final String VIEW_ID = "com.github.fabeclipse.textedgrep.grepview";
@@ -50,57 +58,33 @@ public class GrepView extends ViewPart {
 	private GrepContext grepContext;
 	private AbstractTextEditor textEd;
 	private Color highlightColor;
-
 	private Text regexpText;
 
+	/**
+	 * This object editor activation on the workbench page
+	 * where the view is. 
+	 */
 	private final IPartListener2 partListener = new IPartListener2() {
-		
 		@Override
-		public void partVisible(IWorkbenchPartReference partRef) {
-			// TODO Auto-generated method stub
-			
-		}
-		
+		public void partVisible(IWorkbenchPartReference partRef) {}
 		@Override
-		public void partOpened(IWorkbenchPartReference partRef) {
-			// TODO Auto-generated method stub
-			
-		}
-		
+		public void partOpened(IWorkbenchPartReference partRef) {}
 		@Override
-		public void partInputChanged(IWorkbenchPartReference partRef) {
-			// TODO Auto-generated method stub
-			
-		}
-		
+		public void partInputChanged(IWorkbenchPartReference partRef) {}
 		@Override
-		public void partHidden(IWorkbenchPartReference partRef) {
-			// TODO Auto-generated method stub
-			
-		}
-		
+		public void partHidden(IWorkbenchPartReference partRef) {}
 		@Override
-		public void partDeactivated(IWorkbenchPartReference partRef) {
-			// TODO Auto-generated method stub
-			
-		}
-		
+		public void partDeactivated(IWorkbenchPartReference partRef) {}
 		@Override
-		public void partClosed(IWorkbenchPartReference partRef) {
-		}
-		
+		public void partClosed(IWorkbenchPartReference partRef) {}
 		@Override
-		public void partBroughtToTop(IWorkbenchPartReference partRef) {
-			// TODO Auto-generated method stub
-			
-		}
-		
+		public void partBroughtToTop(IWorkbenchPartReference partRef) {}
 		@Override
 		public void partActivated(IWorkbenchPartReference partRef) {
 			IWorkbenchPart part = partRef.getPart(false);
 			if (linkToEditorAction.isChecked() && part instanceof EditorPart) {
 				// ok, it's a non null editor, grep it
-				doGrep(regexpText);
+				doGrep();
 			}
 		}
 	};
@@ -127,7 +111,9 @@ public class GrepView extends ViewPart {
 			@Override
 			public void widgetDefaultSelected(SelectionEvent e) {
 				// the user pressed ENTER
-				doGrep(regexpText);
+				doGrep();
+				viewer.refresh();
+				viewer.getControl().setFocus();
 			}
 		});
 
@@ -136,6 +122,7 @@ public class GrepView extends ViewPart {
 		ruler.addDecorator(0, new LineNumberRulerColumn() {
 			@Override
 			protected int computeNumberOfDigits() {
+				// see SourceViewer, monkey see monkey do :)
 				if (grepContext != null) {
 					int digits= 2;
 					double lines = grepContext.getMaxOriginalLine();
@@ -168,6 +155,7 @@ public class GrepView extends ViewPart {
 
 		viewer.setDocument(document);
 
+		// track cursor line and synchronise the cursor position in the editor
 		viewer.getTextWidget().addCaretListener(new CaretListener() {
 			@Override
 			public void caretMoved(CaretEvent event) {
@@ -190,11 +178,15 @@ public class GrepView extends ViewPart {
 		menuManager.add(new Action("Grep") {
 			@Override
 			public void run() {
-				doGrep(regexpText);
+				doGrep();
+				viewer.refresh();
+				viewer.getControl().setFocus();
 			}
 		});
 		linkToEditorAction = new Action("Link To Editor",Action.AS_CHECK_BOX) {};
-		menuManager.add(linkToEditorAction);
+		ImageDescriptor image = Activator.imageDescriptorFromPlugin(Activator.PLUGIN_ID, "icons/synced.gif");
+		linkToEditorAction.setImageDescriptor(image);
+		getViewSite().getActionBars().getToolBarManager().add(linkToEditorAction);
 
 		getViewSite().getActionBars().updateActionBars();
 
@@ -202,7 +194,13 @@ public class GrepView extends ViewPart {
 		partService.addPartListener(partListener);
 	}
 
-	private void doGrep(final Text regexpText) {
+	/**
+	 * Filter the content of the currently watched editor using
+	 * the regular expression in the text box.
+	 * 
+	 * The resulting text is shown in the text viewer.
+	 */
+	private void doGrep() {
 		lastRegex = regexpText.getText();
 		grepTool = new GrepTool(lastRegex);
 		IWorkbenchWindow window = getViewSite().getWorkbenchWindow();
@@ -210,7 +208,7 @@ public class GrepView extends ViewPart {
 		if (activeEditor instanceof AbstractTextEditor) {
 			textEd = (AbstractTextEditor) activeEditor;
 		}
-		grepContext = grepTool.grepCurrentEditor(window);
+		grepContext = grepTool.grepEditor(textEd);
 		String grep = grepContext.getText();
 		document.set(grep);
 		int lines = document.getNumberOfLines();

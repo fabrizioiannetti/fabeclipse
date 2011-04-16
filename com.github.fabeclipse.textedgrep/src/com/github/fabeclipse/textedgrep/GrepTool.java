@@ -5,15 +5,14 @@ import java.util.Scanner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-//import org.eclipse.jface.text.DocumentEvent;
 import org.eclipse.jface.text.IDocument;
-//import org.eclipse.jface.text.IDocumentListener;
 import org.eclipse.ui.IEditorInput;
-import org.eclipse.ui.IEditorPart;
-import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.texteditor.AbstractTextEditor;
 
 public class GrepTool {
+
+	private static final int INCREMENT_LINE_BUFFER_COUNT = 10000;
+	private static final int INITIAL_LINE_BUFFER_COUNT = 10000;
 
 	public static class GrepContext {
 		private int[] lineMap;
@@ -87,54 +86,51 @@ public class GrepTool {
 		this.regex = regex;
 	}
 
-	public GrepContext grepCurrentEditor(IWorkbenchWindow window) {
+	public GrepContext grepEditor(AbstractTextEditor textEd) {
 		GrepContext grepContext = null;
 		// start with 10 thousands lines (in the grep result)
-		int[] lineMap = new int[10000];
-		int[] matchBegin = new int[10000];
-		int[] matchEnd = new int[10000];
+		int[] lineMap = new int[INITIAL_LINE_BUFFER_COUNT];
+		int[] matchBegin = new int[INITIAL_LINE_BUFFER_COUNT];
+		int[] matchEnd = new int[INITIAL_LINE_BUFFER_COUNT];
 		StringBuilder grep = new StringBuilder();
-		IEditorPart activeEditor = window.getActivePage().getActiveEditor();
-		if (activeEditor instanceof AbstractTextEditor) {
-			AbstractTextEditor textEd = (AbstractTextEditor) activeEditor;
-			IEditorInput input = textEd.getEditorInput();
-			IDocument document = textEd.getDocumentProvider().getDocument(input);
-			String string = document.get();
+		IEditorInput input = textEd.getEditorInput();
+		IDocument document = textEd.getDocumentProvider().getDocument(input);
+		String string = document.get();
 //			document.addDocumentListener(listener );
-			
-			Scanner s = new Scanner(string);
-			Matcher matcher = Pattern.compile(regex).matcher("");
-			Formatter formatter = new Formatter(grep);
-			int lineNum = 0;
-			int grepLineNum = 0;
-			while(s.hasNextLine()) {
-				String line = s.nextLine();
-				if (matcher.reset(line).find()) {
-					formatter.format("%s\n", line);
-					if (grepLineNum >= lineMap.length) {
-						// resize lineMap adding 10 thousand elements
-						int[] newLineMap = new int[lineMap.length + 10000];
-						System.arraycopy(lineMap, 0, newLineMap, 0, lineMap.length);
-						lineMap = newLineMap;
-						// resize match boundaries accordingly
-						int[] newMatchBegin = new int[lineMap.length];
-						System.arraycopy(matchBegin, 0, newMatchBegin, 0, lineMap.length);
-						matchBegin = newMatchBegin;
-						int[] newMatchEnd = new int[lineMap.length];
-						System.arraycopy(matchEnd, 0, newMatchEnd, 0, lineMap.length);
-						matchEnd = newMatchEnd;
-					}
-					matchBegin[grepLineNum] = matcher.start();
-					matchEnd[grepLineNum] = matcher.end();
-					lineMap[grepLineNum++] = lineNum;
+		
+		Scanner s = new Scanner(string);
+		Matcher matcher = Pattern.compile(regex).matcher("");
+		Formatter formatter = new Formatter(grep);
+		int lineNum = 0;
+		int grepLineNum = 0;
+		while(s.hasNextLine()) {
+			String line = s.nextLine();
+			if (matcher.reset(line).find()) {
+				formatter.format("%s\n", line);
+				if (grepLineNum >= lineMap.length) {
+					// resize lineMap adding 10 thousand elements
+					int[] newLineMap = new int[lineMap.length + INCREMENT_LINE_BUFFER_COUNT];
+					int oldLength = lineMap.length;
+					System.arraycopy(lineMap, 0, newLineMap, 0, oldLength);
+					lineMap = newLineMap;
+					// resize match boundaries accordingly
+					int[] newMatchBegin = new int[lineMap.length];
+					System.arraycopy(matchBegin, 0, newMatchBegin, 0, oldLength);
+					matchBegin = newMatchBegin;
+					int[] newMatchEnd = new int[lineMap.length];
+					System.arraycopy(matchEnd, 0, newMatchEnd, 0, oldLength);
+					matchEnd = newMatchEnd;
 				}
-				lineNum++;
+				matchBegin[grepLineNum] = matcher.start();
+				matchEnd[grepLineNum] = matcher.end();
+				lineMap[grepLineNum++] = lineNum;
 			}
-			// remove trailing newline
-			if (grep.length() > 0)
-				grep.deleteCharAt(grep.length()-1);
-			grepContext = new GrepContext(document, grep, lineMap, matchBegin, matchEnd, grepLineNum);
+			lineNum++;
 		}
+		// remove trailing newline
+		if (grep.length() > 0)
+			grep.deleteCharAt(grep.length()-1);
+		grepContext = new GrepContext(document, grep, lineMap, matchBegin, matchEnd, grepLineNum);
 		return grepContext;
 	}
 }
