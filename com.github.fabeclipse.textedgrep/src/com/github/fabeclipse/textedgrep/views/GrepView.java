@@ -186,6 +186,7 @@ public class GrepView extends ViewPart {
 		linkToEditorAction = new Action("Link To Editor",Action.AS_CHECK_BOX) {};
 		ImageDescriptor image = Activator.imageDescriptorFromPlugin(Activator.PLUGIN_ID, "icons/synced.gif");
 		linkToEditorAction.setImageDescriptor(image);
+		linkToEditorAction.setToolTipText("Sync Grep Content to active editor\nAs soon as an editor is activated its content is filtered");
 		getViewSite().getActionBars().getToolBarManager().add(linkToEditorAction);
 
 		getViewSite().getActionBars().updateActionBars();
@@ -230,6 +231,7 @@ public class GrepView extends ViewPart {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		viewer.getControl().setToolTipText("source: " + textEd.getTitle());
 	}
 
 	@Override
