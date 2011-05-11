@@ -112,7 +112,6 @@ public class GrepView extends ViewPart {
 			public void widgetDefaultSelected(SelectionEvent e) {
 				// the user pressed ENTER
 				doGrep();
-				viewer.refresh();
 				viewer.getControl().setFocus();
 			}
 		});
@@ -179,7 +178,6 @@ public class GrepView extends ViewPart {
 			@Override
 			public void run() {
 				doGrep();
-				viewer.refresh();
 				viewer.getControl().setFocus();
 			}
 		});
