@@ -49,6 +49,10 @@ import com.github.fabeclipse.textedgrep.GrepTool.GrepContext;
  */
 public class GrepView extends ViewPart {
 
+	private static final String GREPREGEX = "grepregex";
+
+	private static final String KEY_CASESENSITIVE = "casesensitive";
+
 	public static final String VIEW_ID = "com.github.fabeclipse.textedgrep.grepview";
 	
 	private IDocument document = new Document();
@@ -59,6 +63,7 @@ public class GrepView extends ViewPart {
 	private AbstractTextEditor textEd;
 	private Color highlightColor;
 	private Text regexpText;
+	private boolean initialCaseSensitivity;
 
 	/**
 	 * This object editor activation on the workbench page
@@ -90,6 +95,8 @@ public class GrepView extends ViewPart {
 	};
 
 	private Action linkToEditorAction;
+
+	private Action csAction;
 
 	@Override
 	public void createPartControl(Composite parent) {
@@ -181,6 +188,10 @@ public class GrepView extends ViewPart {
 				viewer.getControl().setFocus();
 			}
 		});
+		csAction = new Action("Case Sensitive", Action.AS_CHECK_BOX) {};
+		csAction.setChecked(initialCaseSensitivity);
+		menuManager.add(csAction);
+
 		linkToEditorAction = new Action("Link To Editor",Action.AS_CHECK_BOX) {};
 		ImageDescriptor image = Activator.imageDescriptorFromPlugin(Activator.PLUGIN_ID, "icons/synced.gif");
 		linkToEditorAction.setImageDescriptor(image);
@@ -201,7 +212,7 @@ public class GrepView extends ViewPart {
 	 */
 	private void doGrep() {
 		lastRegex = regexpText.getText();
-		grepTool = new GrepTool(lastRegex);
+		grepTool = new GrepTool(lastRegex, csAction.isChecked());
 		IWorkbenchWindow window = getViewSite().getWorkbenchWindow();
 		IEditorPart activeEditor = window.getActivePage().getActiveEditor();
 		if (activeEditor instanceof AbstractTextEditor) {
@@ -240,15 +251,19 @@ public class GrepView extends ViewPart {
 	@Override
 	public void saveState(IMemento memento) {
 		super.saveState(memento);
-		memento.putString("grepregex", lastRegex);
+		memento.putString(GREPREGEX, lastRegex);
+		memento.putBoolean(KEY_CASESENSITIVE, csAction.isChecked() );
 	}
 
 	@Override
 	public void init(IViewSite site, IMemento memento) throws PartInitException {
 		super.init(site, memento);
 		// check if there is a value saved in the memento
-		if (memento != null)
-			lastRegex = memento.getString("grepregex");
+		if (memento != null) {
+			lastRegex = memento.getString(GREPREGEX);
+			Boolean cs = memento.getBoolean(KEY_CASESENSITIVE);
+			initialCaseSensitivity = cs == null ? false : cs;
+		}
 
 		// to make things simpler do not allow a null
 		// regular expression

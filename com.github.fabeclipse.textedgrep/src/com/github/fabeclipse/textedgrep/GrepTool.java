@@ -68,6 +68,7 @@ public class GrepTool {
 	}
 
 	private String regex;
+	private final boolean caseSensitive;
 
 //	private static IDocumentListener listener = new IDocumentListener() {
 //		@Override
@@ -81,9 +82,10 @@ public class GrepTool {
 //		}
 //	};
 	
-	public GrepTool(String regex) {
+	public GrepTool(String regex, boolean caseSensitive) {
 		super();
 		this.regex = regex;
+		this.caseSensitive = caseSensitive;
 	}
 
 	public GrepContext grepEditor(AbstractTextEditor textEd) {
@@ -99,7 +101,7 @@ public class GrepTool {
 //			document.addDocumentListener(listener );
 		
 		Scanner s = new Scanner(string);
-		Matcher matcher = Pattern.compile(regex).matcher("");
+		Matcher matcher = Pattern.compile(regex, caseSensitive ? 0 : Pattern.CASE_INSENSITIVE).matcher("");
 		Formatter formatter = new Formatter(grep);
 		int lineNum = 0;
 		int grepLineNum = 0;
