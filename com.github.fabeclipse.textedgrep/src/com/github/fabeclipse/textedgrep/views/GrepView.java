@@ -54,6 +54,8 @@ public class GrepView extends ViewPart {
 	private static final String KEY_CASESENSITIVE = "casesensitive";
 
 	public static final String VIEW_ID = "com.github.fabeclipse.textedgrep.grepview";
+
+	private static final String KEY_HIGHLIGHTMULTIPLE = "highlightmultiple";
 	
 	private IDocument document = new Document();
 	private TextViewer viewer;
@@ -97,6 +99,10 @@ public class GrepView extends ViewPart {
 	private Action linkToEditorAction;
 
 	private Action csAction;
+
+	private boolean initialHighlightMultiple;
+
+	private Action hmAction;
 
 	@Override
 	public void createPartControl(Composite parent) {
@@ -191,6 +197,9 @@ public class GrepView extends ViewPart {
 		csAction = new Action("Case Sensitive", Action.AS_CHECK_BOX) {};
 		csAction.setChecked(initialCaseSensitivity);
 		menuManager.add(csAction);
+		hmAction = new Action("Highlight Multiple", Action.AS_CHECK_BOX) {};
+		hmAction.setChecked(initialHighlightMultiple);
+		menuManager.add(hmAction);
 
 		linkToEditorAction = new Action("Link To Editor",Action.AS_CHECK_BOX) {};
 		ImageDescriptor image = Activator.imageDescriptorFromPlugin(Activator.PLUGIN_ID, "icons/synced.gif");
@@ -218,22 +227,26 @@ public class GrepView extends ViewPart {
 		if (activeEditor instanceof AbstractTextEditor) {
 			textEd = (AbstractTextEditor) activeEditor;
 		}
-		grepContext = grepTool.grepEditor(textEd);
+		grepContext = grepTool.grepEditor(textEd, hmAction.isChecked());
 		String grep = grepContext.getText();
 		document.set(grep);
 		int lines = document.getNumberOfLines();
 		try {
-			int[] ranges = new int[lines*2];
-			StyleRange[] styles = new StyleRange[lines];
+			int totalMatches = grepContext.getNumberOfMatches();
+			int[] ranges = new int[totalMatches*2];
+			StyleRange[] styles = new StyleRange[totalMatches];
 			// this same style range object is used for all matches
 			// to save some memory, the real ranges are
 			// in the integer arrays
 			StyleRange matchHighLightStyle = new StyleRange();
 			matchHighLightStyle.background = viewer.getTextWidget().getDisplay().getSystemColor(SWT.COLOR_YELLOW);
-			for (int i = 0 ; i < lines ; i++) {
-				ranges[i*2]     = document.getLineOffset(i) + grepContext.getMatchBeginForGrepLine(i);
-				ranges[i*2 + 1] = grepContext.getMatchEndForGrepLine(i) - grepContext.getMatchBeginForGrepLine(i);
-				styles[i]       = matchHighLightStyle;
+			for (int i = 0, j = 0 ; i < lines ; i++) {
+				int nm = grepContext.getNumberOfMatchesForGrepLine(i);
+				for (int k = 0 ; k < nm ; k++) {
+					ranges[j*2]     = document.getLineOffset(i) + grepContext.getMatchBeginForGrepLine(i, k);
+					ranges[j*2 + 1] = grepContext.getMatchEndForGrepLine(i, k) - grepContext.getMatchBeginForGrepLine(i, k);
+					styles[j++]     = matchHighLightStyle;
+				}
 			}
 			viewer.getTextWidget().setStyleRanges(ranges, styles);
 		} catch (BadLocationException e) {
@@ -253,6 +266,7 @@ public class GrepView extends ViewPart {
 		super.saveState(memento);
 		memento.putString(GREPREGEX, lastRegex);
 		memento.putBoolean(KEY_CASESENSITIVE, csAction.isChecked() );
+		memento.putBoolean(KEY_HIGHLIGHTMULTIPLE, hmAction.isChecked() );
 	}
 
 	@Override
@@ -263,6 +277,8 @@ public class GrepView extends ViewPart {
 			lastRegex = memento.getString(GREPREGEX);
 			Boolean cs = memento.getBoolean(KEY_CASESENSITIVE);
 			initialCaseSensitivity = cs == null ? false : cs;
+			Boolean hm = memento.getBoolean(KEY_HIGHLIGHTMULTIPLE);
+			initialCaseSensitivity = hm == null ? false : hm;
 		}
 
 		// to make things simpler do not allow a null
