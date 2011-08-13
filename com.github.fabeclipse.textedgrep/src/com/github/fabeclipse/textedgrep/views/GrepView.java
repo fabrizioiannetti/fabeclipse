@@ -16,6 +16,8 @@ import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.CaretEvent;
 import org.eclipse.swt.custom.CaretListener;
 import org.eclipse.swt.custom.StyleRange;
+import org.eclipse.swt.events.KeyEvent;
+import org.eclipse.swt.events.KeyListener;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.graphics.Color;
@@ -23,6 +25,7 @@ import org.eclipse.swt.graphics.RGB;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Text;
 import org.eclipse.ui.IEditorPart;
 import org.eclipse.ui.IMemento;
@@ -114,7 +117,7 @@ public class GrepView extends ViewPart {
 		regexpText = new Text(parent, SWT.SINGLE);
 		regexpText.setLayoutData(new GridData(SWT.FILL, SWT.BEGINNING, true, false));
 		regexpText.setText(lastRegex);
-		
+
 		// when pressing ENTER in the regexp field do a grep
 		regexpText.addSelectionListener(new SelectionListener() {
 			@Override
@@ -127,6 +130,17 @@ public class GrepView extends ViewPart {
 				doGrep();
 				viewer.getControl().setFocus();
 			}
+		});
+
+		regexpText.addKeyListener(new KeyListener() {
+			@Override
+			public void keyReleased(KeyEvent e) {
+				// key down modes to the grep viewer
+				if (e.keyCode == SWT.ARROW_DOWN)
+					viewer.getControl().setFocus();
+			}
+			@Override
+			public void keyPressed(KeyEvent e) {}
 		});
 
 		// vertical ruler that shows the original's line number
@@ -171,6 +185,7 @@ public class GrepView extends ViewPart {
 		viewer.getTextWidget().addCaretListener(new CaretListener() {
 			@Override
 			public void caretMoved(CaretEvent event) {
+				System.out.println("caret moved" + event);
 				int caretOffset = event.caretOffset;
 				if (grepContext != null) {
 					try {
@@ -211,6 +226,9 @@ public class GrepView extends ViewPart {
 
 		IPartService partService = (IPartService) getViewSite().getService(IPartService.class);
 		partService.addPartListener(partListener);
+
+		// make tab key to toggle between the regular expression text and the viewer
+		parent.setTabList(new Control[] {regexpText, viewer.getControl(), regexpText});
 	}
 
 	/**
