@@ -185,7 +185,6 @@ public class GrepView extends ViewPart {
 		viewer.getTextWidget().addCaretListener(new CaretListener() {
 			@Override
 			public void caretMoved(CaretEvent event) {
-				System.out.println("caret moved" + event);
 				int caretOffset = event.caretOffset;
 				if (grepContext != null) {
 					try {
