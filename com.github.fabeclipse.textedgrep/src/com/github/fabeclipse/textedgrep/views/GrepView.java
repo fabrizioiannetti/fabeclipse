@@ -4,7 +4,6 @@ import org.eclipse.core.runtime.IAdaptable;
 import org.eclipse.jface.action.Action;
 import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.resource.ImageDescriptor;
-import org.eclipse.jface.resource.JFaceColors;
 import org.eclipse.jface.resource.JFaceResources;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.CursorLinePainter;
@@ -368,6 +367,7 @@ public class GrepView extends ViewPart implements IAdaptable {
 			@Override
 			public void keyPressed(KeyEvent e) {
 				if (e.keyCode == SWT.ESC) {
+					closeBar.run();
 				} else if (e.keyCode == SWT.ARROW_UP) {
 					findPrev.run();
 				} else if (e.keyCode == SWT.ARROW_DOWN) {
