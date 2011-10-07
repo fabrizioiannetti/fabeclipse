@@ -16,17 +16,17 @@ public class GrepTool {
 
 	public static class GrepContext {
 		private int[] lineMap;
-		private final IDocument document;
-		private final StringBuilder grep;
+		private final IDocument originalDocument;
+		private final String grep;
 		private final int numGrepLines;
 		private final int[] matchBegin;
 		private final int[] matchEnd;
 		private final int[] matchMap;
 		private int numberOfMatches;
 
-		public GrepContext(IDocument document, StringBuilder grep, int[] lineMap, int[] matchBegin, int[] matchEnd, int[] matchMap, int numGrepLines) {
-			this.document = document;
-			this.grep = grep;
+		public GrepContext(IDocument originalDocument, StringBuilder grep, int[] lineMap, int[] matchBegin, int[] matchEnd, int[] matchMap, int numGrepLines) {
+			this.originalDocument = originalDocument;
+			this.grep = grep.toString();
 			this.lineMap = lineMap;
 			this.matchBegin = matchBegin;
 			this.matchEnd = matchEnd;
@@ -77,7 +77,7 @@ public class GrepTool {
 		}
 		
 		public IDocument getDocument() {
-			return document;
+			return originalDocument;
 		}
 		
 		public int getMaxOriginalLine() {

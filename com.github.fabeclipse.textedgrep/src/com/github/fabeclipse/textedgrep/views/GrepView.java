@@ -1,13 +1,16 @@
 package com.github.fabeclipse.textedgrep.views;
 
+import org.eclipse.core.runtime.IAdaptable;
 import org.eclipse.jface.action.Action;
 import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.resource.ImageDescriptor;
+import org.eclipse.jface.resource.JFaceColors;
 import org.eclipse.jface.resource.JFaceResources;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.CursorLinePainter;
-import org.eclipse.jface.text.Document;
-import org.eclipse.jface.text.IDocument;
+import org.eclipse.jface.text.IFindReplaceTarget;
+import org.eclipse.jface.text.IFindReplaceTargetExtension;
+import org.eclipse.jface.text.IFindReplaceTargetExtension3;
 import org.eclipse.jface.text.TextViewer;
 import org.eclipse.jface.text.source.CompositeRuler;
 import org.eclipse.jface.text.source.LineNumberRulerColumn;
@@ -18,6 +21,8 @@ import org.eclipse.swt.custom.CaretListener;
 import org.eclipse.swt.custom.StyleRange;
 import org.eclipse.swt.events.KeyEvent;
 import org.eclipse.swt.events.KeyListener;
+import org.eclipse.swt.events.ModifyEvent;
+import org.eclipse.swt.events.ModifyListener;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.graphics.Color;
@@ -26,7 +31,10 @@ import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
+import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Text;
+import org.eclipse.swt.widgets.ToolBar;
+import org.eclipse.swt.widgets.ToolItem;
 import org.eclipse.ui.IEditorPart;
 import org.eclipse.ui.IMemento;
 import org.eclipse.ui.IPartListener2;
@@ -36,6 +44,7 @@ import org.eclipse.ui.IWorkbenchPart;
 import org.eclipse.ui.IWorkbenchPartReference;
 import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.PartInitException;
+import org.eclipse.ui.actions.ActionFactory;
 import org.eclipse.ui.part.EditorPart;
 import org.eclipse.ui.part.ViewPart;
 import org.eclipse.ui.texteditor.AbstractTextEditor;
@@ -50,7 +59,7 @@ import com.github.fabeclipse.textedgrep.GrepTool.GrepContext;
  * 
  * @author fabrizio iannetti
  */
-public class GrepView extends ViewPart {
+public class GrepView extends ViewPart implements IAdaptable {
 
 	private static final String GREPREGEX = "grepregex";
 
@@ -59,8 +68,13 @@ public class GrepView extends ViewPart {
 	public static final String VIEW_ID = "com.github.fabeclipse.textedgrep.grepview";
 
 	private static final String KEY_HIGHLIGHTMULTIPLE = "highlightmultiple";
+
+	private static final String[] LINE_DELIMITERS = {"\n", "\r\n", "\r"};
 	
-	private IDocument document = new Document();
+	private Color failedSearchColor = new Color(Display.getDefault(), 255, 128, 128);
+	private Color successfulSearchColor;
+	
+//	private IDocument document = new DocumentClone("", LINE_DELIMITERS);
 	private TextViewer viewer;
 	private String lastRegex;
 	private GrepTool grepTool;
@@ -69,6 +83,11 @@ public class GrepView extends ViewPart {
 	private Color highlightColor;
 	private Text regexpText;
 	private boolean initialCaseSensitivity;
+
+	// index of last successful search
+	private int findIndex;
+	// position where to start the first find
+	private int firstFindIndex;
 
 	/**
 	 * This object editor activation on the workbench page
@@ -107,8 +126,10 @@ public class GrepView extends ViewPart {
 
 	private Action hmAction;
 
+	private Composite findbar;
+
 	@Override
-	public void createPartControl(Composite parent) {
+	public void createPartControl(final Composite parent) {
 		GridLayout layout = new GridLayout(1, false);
 		parent.setLayout(layout);
 		layout.marginHeight = 0;
@@ -179,7 +200,7 @@ public class GrepView extends ViewPart {
 		cursorLinePainter.setHighlightColor(highlightColor);
 		viewer.addPainter(cursorLinePainter);
 
-		viewer.setDocument(document);
+		viewer.setDocument(new DocumentClone("grep result", LINE_DELIMITERS));
 
 		// track cursor line and synchronise the cursor position in the editor
 		viewer.getTextWidget().addCaretListener(new CaretListener() {
@@ -188,7 +209,7 @@ public class GrepView extends ViewPart {
 				int caretOffset = event.caretOffset;
 				if (grepContext != null) {
 					try {
-						int grepLine = document.getLineOfOffset(caretOffset);
+						int grepLine = viewer.getDocument().getLineOfOffset(caretOffset);
 						int line = grepContext.getOriginalLine(grepLine);
 						int offset = grepContext.getDocument().getLineOffset(line);
 						textEd.selectAndReveal(offset, 0);
@@ -221,13 +242,167 @@ public class GrepView extends ViewPart {
 		linkToEditorAction.setToolTipText("Sync Grep Content to active editor\nAs soon as an editor is activated its content is filtered");
 		getViewSite().getActionBars().getToolBarManager().add(linkToEditorAction);
 
-		getViewSite().getActionBars().updateActionBars();
+// this code would use the standard find dialog, maybe offer it as an option?
+//		getViewSite().getActionBars().setGlobalActionHandler(ActionFactory.FIND.getId(), new FindReplaceAction(new ResourceBundle() {
+//			@Override
+//			protected Object handleGetObject(String key) { return null; }
+//			@Override
+//			public Enumeration<String> getKeys() { return null; }
+//		}, "GrepView.FindReplace", this));
 
+		getViewSite().getActionBars().setGlobalActionHandler(ActionFactory.FIND.getId(), new Action() {
+			@Override
+			public void run() {
+				createFindbar(parent);
+			}
+		});
 		IPartService partService = (IPartService) getViewSite().getService(IPartService.class);
 		partService.addPartListener(partListener);
-
+		
 		// make tab key to toggle between the regular expression text and the viewer
 		parent.setTabList(new Control[] {regexpText, viewer.getControl(), regexpText});
+	}
+
+	private void createFindbar(final Composite parent) {
+		final IFindReplaceTargetExtension target = (IFindReplaceTargetExtension)viewer.getFindReplaceTarget();
+		target.beginSession();
+		firstFindIndex = viewer.getSelectedRange().x;
+		findIndex = viewer.getSelectedRange().x;
+		if (findbar != null && !findbar.isDisposed()) {
+			findbar.setFocus();
+			return;
+		}
+		findbar = new Composite(parent, SWT.NONE);
+		findbar.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false));
+		GridLayout layout = new GridLayout(2, false);
+		layout.marginHeight = 0;
+		layout.marginWidth = 0;
+		findbar.setLayout(layout);
+
+		final Text findText = new Text(findbar, SWT.SINGLE | SWT.BORDER);
+		findText.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, true));
+
+		successfulSearchColor = findText.getBackground();
+
+		ToolBar findBar = new ToolBar(findbar, SWT.FLAT | SWT.HORIZONTAL);
+		ToolItem closeItem = new ToolItem(findBar, SWT.PUSH);
+		closeItem.setText("X");
+		
+		ToolItem nextfindItem = new ToolItem(findBar, SWT.FLAT);
+		nextfindItem.setText("Next");
+		ToolItem prevfindItem = new ToolItem(findBar, SWT.PUSH | SWT.FLAT);
+		prevfindItem.setText("Prev");
+
+		final Runnable closeBar = new Runnable() {
+			@Override
+			public void run() {
+				disposeFindbar();
+				parent.layout();
+				target.endSession();
+			}
+		};
+
+		final Runnable findNext = new Runnable() {
+			@Override
+			public void run() {
+				// find next
+				String toFind = findText.getText();
+				int index = viewer.getSelectedRange().x + 1;
+				int newIndex = ((IFindReplaceTargetExtension3)target).findAndSelect(index, toFind, true, false, false, false);
+				if (newIndex == -1) {
+					// not found
+					findText.setBackground(failedSearchColor);
+				} else {
+					findText.setBackground(successfulSearchColor);
+					findIndex = newIndex;
+				}
+			}
+		};
+
+		final Runnable findPrev = new Runnable() {
+			@Override
+			public void run() {
+				// find previous
+				String toFind = findText.getText();
+				int newIndex = ((IFindReplaceTargetExtension3)target).findAndSelect(findIndex, toFind, false, false, false, false);
+				if (newIndex == -1) {
+					// not found
+					findText.setBackground(failedSearchColor);
+				} else {
+					findText.setBackground(successfulSearchColor);
+					findIndex = newIndex;
+				}
+			}
+		};
+
+		closeItem.addSelectionListener(new SelectionListener() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				closeBar.run();
+			}
+			@Override
+			public void widgetDefaultSelected(SelectionEvent e) {}
+		});
+		
+		nextfindItem.addSelectionListener(new SelectionListener() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				findNext.run();
+			}
+			@Override
+			public void widgetDefaultSelected(SelectionEvent e) {}
+		});
+
+		prevfindItem.addSelectionListener(new SelectionListener() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				findPrev.run();
+			}
+			@Override
+			public void widgetDefaultSelected(SelectionEvent e) {}
+		});
+
+		findText.addKeyListener(new KeyListener() {
+			@Override
+			public void keyReleased(KeyEvent e) {}
+			@Override
+			public void keyPressed(KeyEvent e) {
+				if (e.keyCode == SWT.ESC) {
+				} else if (e.keyCode == SWT.ARROW_UP) {
+					findPrev.run();
+				} else if (e.keyCode == SWT.ARROW_DOWN) {
+					findNext.run();
+				}
+			}
+		});
+		findText.addModifyListener(new ModifyListener() {
+
+			@Override
+			public void modifyText(ModifyEvent e) {
+				// text to find has changed, search again
+				// from begin of session
+				String toFind = findText.getText();
+				int newIndex = ((IFindReplaceTargetExtension3)target).findAndSelect(firstFindIndex, toFind, true, false, false, false);
+				if (newIndex == -1) {
+					// not found
+					findText.setBackground(failedSearchColor);
+				} else {
+					findText.setBackground(successfulSearchColor);
+				}
+			}
+		});
+		parent.layout();
+		findText.setFocus();
+	}
+
+	
+//	ActionFactory.IWorkbenchAction a = ActionFactory.FIND.create(getViewSite().getWorkbenchWindow());
+
+	private void disposeFindbar() {
+		if (findbar != null && !findbar.isDisposed())
+			findbar.dispose();
+		findbar = null;
+		viewer.getControl().setFocus();
 	}
 
 	/**
@@ -245,8 +420,8 @@ public class GrepView extends ViewPart {
 			textEd = (AbstractTextEditor) activeEditor;
 		}
 		grepContext = grepTool.grepEditor(textEd, hmAction.isChecked());
-		String grep = grepContext.getText();
-		document.set(grep);
+		DocumentClone document = new DocumentClone(grepContext.getText(), LINE_DELIMITERS);
+		viewer.setDocument(document);
 		int lines = document.getNumberOfLines();
 		try {
 			int totalMatches = grepContext.getNumberOfMatches();
@@ -309,7 +484,20 @@ public class GrepView extends ViewPart {
 		if (highlightColor != null) {
 			highlightColor.dispose();
 			highlightColor = null;
+			failedSearchColor.dispose();
 		}
 		super.dispose();
+	}
+	
+	@SuppressWarnings("rawtypes")
+	@Override
+	public Object getAdapter(Class adapter) {
+		Object object = super.getAdapter(adapter);
+		System.out.println(adapter + "->" + object);
+		if (object == null && adapter.equals(IFindReplaceTarget.class)) {
+			object = viewer.getFindReplaceTarget();
+			System.out.println("     ->" + object);
+		}
+		return object;
 	}
 }
