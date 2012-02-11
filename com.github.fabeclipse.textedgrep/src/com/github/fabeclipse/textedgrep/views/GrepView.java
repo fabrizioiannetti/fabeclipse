@@ -110,8 +110,9 @@ public class GrepView extends ViewPart implements IAdaptable {
 		@Override
 		public void partActivated(IWorkbenchPartReference partRef) {
 			IWorkbenchPart part = partRef.getPart(false);
-			if (linkToEditorAction.isChecked() && part instanceof EditorPart) {
-				// ok, it's a non null editor, grep it
+			if (linkToEditorAction.isChecked() && part instanceof EditorPart && part != textEd) {
+				// ok, it's a non null editor, and it is not the current one
+				// grep it
 				doGrep();
 			}
 		}
