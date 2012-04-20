@@ -2,7 +2,7 @@
 <feature
       id="com.github.fabeclipse.textedgrep_feature"
       label="Text Editor Grep"
-      version="1.1.0.qualifier"
+      version="1.2.0.qualifier"
       provider-name="Fabrizio Iannetti">
 
    <description url="https://github.com/fabrizioiannetti/fabeclipse">
