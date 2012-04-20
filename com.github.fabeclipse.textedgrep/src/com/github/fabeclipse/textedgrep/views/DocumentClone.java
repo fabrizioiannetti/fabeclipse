@@ -9,7 +9,7 @@ import org.eclipse.jface.text.ITextStore;
 /**
  * An {@link org.eclipse.jface.text.IDocument} that is a read-only clone of another document.
  *
- * @since 3.0
+ * @since 1.2
  */
 public class DocumentClone extends AbstractDocument {
 

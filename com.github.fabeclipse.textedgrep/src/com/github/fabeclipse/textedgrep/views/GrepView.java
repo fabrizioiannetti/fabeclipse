@@ -6,6 +6,7 @@ import java.util.List;
 import org.eclipse.core.runtime.IAdaptable;
 import org.eclipse.jface.action.Action;
 import org.eclipse.jface.action.IMenuManager;
+import org.eclipse.jface.dialogs.InputDialog;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.resource.JFaceResources;
 import org.eclipse.jface.text.BadLocationException;
@@ -73,10 +74,17 @@ public class GrepView extends ViewPart implements IAdaptable {
 	private static final String KEY_HIGHLIGHTMULTIPLE = "highlightmultiple";
 
 	private static final String[] LINE_DELIMITERS = {"\n", "\r\n", "\r"};
-	
+
+	private static final String KEY_REGEX_HISTORY = "regexhistory";
+
+	/**
+	 * @since 1.2
+	 */
+	protected static final int REGEX_HISTORY_MAX_SIZE = 20;
+
 	private Color failedSearchColor = new Color(Display.getDefault(), 255, 128, 128);
 	private Color successfulSearchColor;
-	
+
 	private TextViewer viewer;
 	private String lastRegex;
 	private GrepTool grepTool;
@@ -156,17 +164,19 @@ public class GrepView extends ViewPart implements IAdaptable {
 				doGrep();
 				viewer.getControl().setFocus();
 				String text = regexpText.getText();
-				// add regex if:
+				// add regex to history if:
 				// * not empty
 				// * history is empty, or last element of history is not the same
 				if (!text.isEmpty() && (regexHistory.isEmpty() || !regexHistory.get(regexHistory.size() - 1).equals(text))) {
+					while (regexHistory.size() >= REGEX_HISTORY_MAX_SIZE)
+						regexHistory.remove(0);
 					regexHistory.add(text);
 					regexpText.setItems(regexHistory.toArray(new String[regexHistory.size()]));
 				}
 			}
 		});
 
-// remove this as the combo triggers the drop down with the down key
+// remove this as the combo triggers the drop down with the arrow down key
 //		regexpText.addKeyListener(new KeyListener() {
 //			@Override
 //			public void keyReleased(KeyEvent e) {
@@ -250,6 +260,47 @@ public class GrepView extends ViewPart implements IAdaptable {
 		hmAction.setChecked(initialHighlightMultiple);
 		menuManager.add(hmAction);
 
+		menuManager.add(new Action("Edit History") {
+			@Override
+			public void run() {
+				String history = "";
+				for (String helem : GrepView.this.regexHistory) {
+					history += helem + "\n";
+				}
+				InputDialog inputDialog = new InputDialog(getViewSite().getShell(), "Regex history", null, history, null) {
+					@Override
+					protected int getInputTextStyle() {
+						return SWT.MULTI | SWT.BORDER;
+					}
+					@Override
+					protected boolean isResizable() {
+						return true;
+					}
+					@Override
+					protected Control createDialogArea(Composite parent) {
+						// TODO Auto-generated method stub
+						Control area = super.createDialogArea(parent);
+				        getText().setLayoutData(new GridData(GridData.GRAB_HORIZONTAL | GridData.GRAB_VERTICAL | GridData.VERTICAL_ALIGN_FILL
+				                | GridData.HORIZONTAL_ALIGN_FILL));
+						return area;
+					}
+				};
+				inputDialog.open();
+				history = inputDialog.getValue();
+				if (inputDialog.getReturnCode() == InputDialog.OK) {
+					regexHistory.clear();
+					if (history == null)
+						history = "";
+					String[] harray = history.split("\n");
+					for (String helem : harray) {
+						if (!helem.isEmpty())
+							regexHistory.add(helem);
+					}
+					regexpText.setItems(regexHistory.toArray(new String[regexHistory.size()]));
+				}
+			}
+		});
+
 		linkToEditorAction = new Action("Link To Editor",Action.AS_CHECK_BOX) {};
 		ImageDescriptor image = Activator.imageDescriptorFromPlugin(Activator.PLUGIN_ID, "icons/synced.gif");
 		linkToEditorAction.setImageDescriptor(image);
@@ -272,7 +323,7 @@ public class GrepView extends ViewPart implements IAdaptable {
 		});
 		IPartService partService = (IPartService) getViewSite().getService(IPartService.class);
 		partService.addPartListener(partListener);
-		
+
 		// make tab key to toggle between the regular expression text and the viewer
 		parent.setTabList(new Control[] {regexpText, viewer.getControl(), regexpText});
 	}
@@ -301,7 +352,7 @@ public class GrepView extends ViewPart implements IAdaptable {
 		ToolBar findBar = new ToolBar(findbar, SWT.FLAT | SWT.HORIZONTAL);
 		ToolItem closeItem = new ToolItem(findBar, SWT.PUSH);
 		closeItem.setText("X");
-		
+
 		ToolItem nextfindItem = new ToolItem(findBar, SWT.FLAT);
 		nextfindItem.setText("Next");
 		ToolItem prevfindItem = new ToolItem(findBar, SWT.PUSH | SWT.FLAT);
@@ -357,7 +408,7 @@ public class GrepView extends ViewPart implements IAdaptable {
 			@Override
 			public void widgetDefaultSelected(SelectionEvent e) {}
 		});
-		
+
 		nextfindItem.addSelectionListener(new SelectionListener() {
 			@Override
 			public void widgetSelected(SelectionEvent e) {
@@ -410,7 +461,7 @@ public class GrepView extends ViewPart implements IAdaptable {
 		findText.setFocus();
 	}
 
-	
+
 //	ActionFactory.IWorkbenchAction a = ActionFactory.FIND.create(getViewSite().getWorkbenchWindow());
 
 	private void disposeFindbar() {
@@ -474,6 +525,11 @@ public class GrepView extends ViewPart implements IAdaptable {
 		memento.putString(GREPREGEX, lastRegex);
 		memento.putBoolean(KEY_CASESENSITIVE, csAction.isChecked() );
 		memento.putBoolean(KEY_HIGHLIGHTMULTIPLE, hmAction.isChecked() );
+		String history = "";
+		for (String helement : regexHistory) {
+			history += helement + "\n";
+		}
+		memento.putString(KEY_REGEX_HISTORY, history);
 	}
 
 	@Override
@@ -486,6 +542,14 @@ public class GrepView extends ViewPart implements IAdaptable {
 			initialCaseSensitivity = cs == null ? false : cs;
 			Boolean hm = memento.getBoolean(KEY_HIGHLIGHTMULTIPLE);
 			initialCaseSensitivity = hm == null ? false : hm;
+			String history = memento.getString(KEY_REGEX_HISTORY);
+			if (history != null) {
+				String[] harray = history.split("\n");
+				for (String helem : harray) {
+					if (!helem.isEmpty())
+						regexHistory.add(helem);
+				}
+			}
 		}
 
 		// to make things simpler do not allow a null
@@ -503,7 +567,7 @@ public class GrepView extends ViewPart implements IAdaptable {
 		}
 		super.dispose();
 	}
-	
+
 	@SuppressWarnings("rawtypes")
 	@Override
 	public Object getAdapter(Class adapter) {
