@@ -1,5 +1,8 @@
 package com.github.fabeclipse.textedgrep.views;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.eclipse.jface.action.Action;
 import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.resource.ImageDescriptor;
@@ -24,6 +27,7 @@ import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.RGB;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
+import org.eclipse.swt.widgets.Combo;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Text;
@@ -47,7 +51,7 @@ import com.github.fabeclipse.textedgrep.GrepTool.GrepContext;
 /**
  * View to show the result of a grep operation on the
  * content of an editor.
- * 
+ *
  * @author fabrizio iannetti
  */
 public class GrepView extends ViewPart {
@@ -59,7 +63,7 @@ public class GrepView extends ViewPart {
 	public static final String VIEW_ID = "com.github.fabeclipse.textedgrep.grepview";
 
 	private static final String KEY_HIGHLIGHTMULTIPLE = "highlightmultiple";
-	
+
 	private IDocument document = new Document();
 	private TextViewer viewer;
 	private String lastRegex;
@@ -67,12 +71,12 @@ public class GrepView extends ViewPart {
 	private GrepContext grepContext;
 	private AbstractTextEditor textEd;
 	private Color highlightColor;
-	private Text regexpText;
+	private Combo regexpText;
 	private boolean initialCaseSensitivity;
 
 	/**
 	 * This object editor activation on the workbench page
-	 * where the view is. 
+	 * where the view is.
 	 */
 	private final IPartListener2 partListener = new IPartListener2() {
 		@Override
@@ -107,6 +111,8 @@ public class GrepView extends ViewPart {
 
 	private Action hmAction;
 
+	private List<String> regexHistory = new ArrayList<String>();
+
 	@Override
 	public void createPartControl(Composite parent) {
 		GridLayout layout = new GridLayout(1, false);
@@ -114,9 +120,10 @@ public class GrepView extends ViewPart {
 		layout.marginHeight = 0;
 		layout.marginWidth = 0;
 
-		regexpText = new Text(parent, SWT.SINGLE);
+		regexpText = new Combo(parent, SWT.SINGLE);
 		regexpText.setLayoutData(new GridData(SWT.FILL, SWT.BEGINNING, true, false));
 		regexpText.setText(lastRegex);
+		regexpText.setItems(regexHistory.toArray(new String[regexHistory.size()]));
 
 		// when pressing ENTER in the regexp field do a grep
 		regexpText.addSelectionListener(new SelectionListener() {
@@ -129,19 +136,28 @@ public class GrepView extends ViewPart {
 				// the user pressed ENTER
 				doGrep();
 				viewer.getControl().setFocus();
+				String text = regexpText.getText();
+				// add regex if:
+				// * not empty
+				// * history is empty, or last element of history is not the same
+				if (!text.isEmpty() && (regexHistory.isEmpty() || !regexHistory.get(regexHistory.size() - 1).equals(text))) {
+					regexHistory.add(text);
+					regexpText.setItems(regexHistory.toArray(new String[regexHistory.size()]));
+				}
 			}
 		});
 
-		regexpText.addKeyListener(new KeyListener() {
-			@Override
-			public void keyReleased(KeyEvent e) {
-				// key down modes to the grep viewer
-				if (e.keyCode == SWT.ARROW_DOWN)
-					viewer.getControl().setFocus();
-			}
-			@Override
-			public void keyPressed(KeyEvent e) {}
-		});
+// remove this as the combo triggers the drop down with the down key
+//		regexpText.addKeyListener(new KeyListener() {
+//			@Override
+//			public void keyReleased(KeyEvent e) {
+//				// key down modes to the grep viewer
+//				if (e.keyCode == SWT.ARROW_DOWN)
+//					viewer.getControl().setFocus();
+//			}
+//			@Override
+//			public void keyPressed(KeyEvent e) {}
+//		});
 
 		// vertical ruler that shows the original's line number
 		CompositeRuler ruler = new CompositeRuler();
@@ -233,7 +249,7 @@ public class GrepView extends ViewPart {
 	/**
 	 * Filter the content of the currently watched editor using
 	 * the regular expression in the text box.
-	 * 
+	 *
 	 * The resulting text is shown in the text viewer.
 	 */
 	private void doGrep() {
