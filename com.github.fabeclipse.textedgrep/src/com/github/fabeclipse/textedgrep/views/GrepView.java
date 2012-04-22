@@ -1,6 +1,7 @@
 package com.github.fabeclipse.textedgrep.views;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.eclipse.core.runtime.IAdaptable;
@@ -150,7 +151,7 @@ public class GrepView extends ViewPart implements IAdaptable {
 		regexpText = new Combo(parent, SWT.SINGLE);
 		regexpText.setLayoutData(new GridData(SWT.FILL, SWT.BEGINNING, true, false));
 		regexpText.setText(lastRegex);
-		regexpText.setItems(regexHistory.toArray(new String[regexHistory.size()]));
+		setRegexHistoryInComboBox();
 
 		// when pressing ENTER in the regexp field do a grep
 		regexpText.addSelectionListener(new SelectionListener() {
@@ -171,7 +172,7 @@ public class GrepView extends ViewPart implements IAdaptable {
 					while (regexHistory.size() >= REGEX_HISTORY_MAX_SIZE)
 						regexHistory.remove(0);
 					regexHistory.add(text);
-					regexpText.setItems(regexHistory.toArray(new String[regexHistory.size()]));
+					setRegexHistoryInComboBox();
 				}
 			}
 		});
@@ -296,7 +297,7 @@ public class GrepView extends ViewPart implements IAdaptable {
 						if (!helem.isEmpty())
 							regexHistory.add(helem);
 					}
-					regexpText.setItems(regexHistory.toArray(new String[regexHistory.size()]));
+					setRegexHistoryInComboBox();
 				}
 			}
 		});
@@ -326,6 +327,13 @@ public class GrepView extends ViewPart implements IAdaptable {
 
 		// make tab key to toggle between the regular expression text and the viewer
 		parent.setTabList(new Control[] {regexpText, viewer.getControl(), regexpText});
+	}
+
+	private void setRegexHistoryInComboBox() {
+		String[] harray = new String[regexHistory.size()];
+		for (int i = 0; i < harray.length; i++)
+			harray[i] = regexHistory.get(harray.length - i - 1);
+		regexpText.setItems(harray);
 	}
 
 	private void createFindbar(final Composite parent) {
