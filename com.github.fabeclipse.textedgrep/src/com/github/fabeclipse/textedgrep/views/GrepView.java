@@ -1,7 +1,6 @@
 package com.github.fabeclipse.textedgrep.views;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import org.eclipse.core.runtime.IAdaptable;
@@ -56,6 +55,7 @@ import org.eclipse.ui.texteditor.AbstractTextEditor;
 
 import com.github.fabeclipse.textedgrep.Activator;
 import com.github.fabeclipse.textedgrep.GrepTool;
+import com.github.fabeclipse.textedgrep.GrepTool.DocumentGrepTarget;
 import com.github.fabeclipse.textedgrep.GrepTool.GrepContext;
 
 /**
@@ -236,7 +236,7 @@ public class GrepView extends ViewPart implements IAdaptable {
 					try {
 						int grepLine = viewer.getDocument().getLineOfOffset(caretOffset);
 						int line = grepContext.getOriginalLine(grepLine);
-						int offset = grepContext.getDocument().getLineOffset(line);
+						int offset = grepContext.getTarget().getLineOffset(line);
 						textEd.selectAndReveal(offset, 0);
 					} catch (BadLocationException e) {
 						// TODO Auto-generated catch block
@@ -493,7 +493,8 @@ public class GrepView extends ViewPart implements IAdaptable {
 		if (activeEditor instanceof AbstractTextEditor) {
 			textEd = (AbstractTextEditor) activeEditor;
 		}
-		grepContext = grepTool.grepEditor(textEd, hmAction.isChecked());
+		DocumentGrepTarget target = new GrepTool.DocumentGrepTarget(textEd);
+		grepContext = grepTool.grep(target, hmAction.isChecked());
 		DocumentClone document = new DocumentClone(grepContext.getText(), LINE_DELIMITERS);
 		viewer.setDocument(document);
 		int lines = document.getNumberOfLines();

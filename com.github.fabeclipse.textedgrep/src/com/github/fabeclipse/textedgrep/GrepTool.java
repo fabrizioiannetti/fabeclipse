@@ -5,6 +5,7 @@ import java.util.Scanner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.texteditor.AbstractTextEditor;
@@ -14,9 +15,68 @@ public class GrepTool {
 	private static final int INCREMENT_LINE_BUFFER_COUNT = 10000;
 	private static final int INITIAL_LINE_BUFFER_COUNT = 10000;
 
+	public static interface IGrepTarget {
+		// indicate start and stop of parsing
+		public void start();
+		public void stop();
+
+		// to iterate on target lines
+		public boolean hasNextLine();
+		public String nextLine();
+
+		// utility: just used to get the original offset
+		// TODO: should not be part of the interface
+		public int getLineOffset(int line);
+	}
+
+	public static class DocumentGrepTarget implements IGrepTarget {
+
+		private final IDocument document;
+		private Scanner scanner;
+		
+		public DocumentGrepTarget(AbstractTextEditor textEd) {
+			IEditorInput input = textEd.getEditorInput();
+			document = textEd.getDocumentProvider().getDocument(input);
+		}
+
+		public DocumentGrepTarget(IDocument document) {
+			this.document = document;
+		}
+
+		@Override
+		public void start() {
+			String string = document.get();
+			scanner = new Scanner(string);
+		}
+		@Override
+		public void stop() {
+			scanner.close();
+			scanner = null;
+		}
+		@Override
+		public boolean hasNextLine() {
+			return scanner.hasNextLine();
+		}
+
+		@Override
+		public String nextLine() {
+			return scanner.nextLine();
+		}
+		@Override
+		public int getLineOffset(int line) {
+			int offset = -1;
+			try {
+				offset = document.getLineOffset(line);
+			} catch (BadLocationException e) {
+				// just return -1 as bad location
+			}
+			return offset;
+		}
+		
+	}
 	public static class GrepContext {
 		private int[] lineMap;
-		private final IDocument originalDocument;
+		private final IGrepTarget target;
 		private final String grep;
 		private final int numGrepLines;
 		private final int[] matchBegin;
@@ -24,8 +84,8 @@ public class GrepTool {
 		private final int[] matchMap;
 		private int numberOfMatches;
 
-		public GrepContext(IDocument originalDocument, StringBuilder grep, int[] lineMap, int[] matchBegin, int[] matchEnd, int[] matchMap, int numGrepLines) {
-			this.originalDocument = originalDocument;
+		public GrepContext(IGrepTarget target, StringBuilder grep, int[] lineMap, int[] matchBegin, int[] matchEnd, int[] matchMap, int numGrepLines) {
+			this.target = target;
 			this.grep = grep.toString();
 			this.lineMap = lineMap;
 			this.matchBegin = matchBegin;
@@ -76,8 +136,8 @@ public class GrepTool {
 			return grep.toString();
 		}
 		
-		public IDocument getDocument() {
-			return originalDocument;
+		public IGrepTarget getTarget() {
+			return target;
 		}
 		
 		public int getMaxOriginalLine() {
@@ -112,7 +172,7 @@ public class GrepTool {
 		this.caseSensitive = caseSensitive;
 	}
 
-	public GrepContext grepEditor(AbstractTextEditor textEd, boolean multiple) {
+	public GrepContext grep(IGrepTarget target, boolean multiple) {
 		GrepContext grepContext = null;
 		// start with 10 thousands lines (in the grep result)
 		int[] lineMap = new int[INITIAL_LINE_BUFFER_COUNT];
@@ -120,18 +180,15 @@ public class GrepTool {
 		int[] matchBegin = new int[INITIAL_LINE_BUFFER_COUNT];
 		int[] matchEnd = new int[matchBegin.length];
 		StringBuilder grep = new StringBuilder();
-		IEditorInput input = textEd.getEditorInput();
-		IDocument document = textEd.getDocumentProvider().getDocument(input);
-		String string = document.get();
-		
-		Scanner s = new Scanner(string);
+
 		Matcher matcher = Pattern.compile(regex, caseSensitive ? 0 : Pattern.CASE_INSENSITIVE).matcher("");
 		Formatter formatter = new Formatter(grep);
 		int lineNum = 0;
 		int grepLineNum = 0;
 		int matchNum = 0;
-		while(s.hasNextLine()) {
-			String line = s.nextLine();
+		target.start();
+		while(target.hasNextLine()) {
+			String line = target.nextLine();
 			matcher.reset(line);
 			boolean found = false;
 			// look for matches on this line
@@ -175,8 +232,9 @@ public class GrepTool {
 		// remove trailing newline
 		if (grep.length() > 0)
 			grep.deleteCharAt(grep.length()-1);
-		grepContext = new GrepContext(document, grep, lineMap, matchBegin, matchEnd, matchMap, grepLineNum);
+		grepContext = new GrepContext(target, grep, lineMap, matchBegin, matchEnd, matchMap, grepLineNum);
 		grepContext.numberOfMatches = matchNum;
+		target.stop();
 		return grepContext;
 	}
 }
