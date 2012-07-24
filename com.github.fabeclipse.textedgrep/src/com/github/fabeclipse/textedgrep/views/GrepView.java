@@ -11,6 +11,7 @@ import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.resource.JFaceResources;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.CursorLinePainter;
+import org.eclipse.jface.text.Document;
 import org.eclipse.jface.text.IFindReplaceTarget;
 import org.eclipse.jface.text.IFindReplaceTargetExtension;
 import org.eclipse.jface.text.IFindReplaceTargetExtension3;
@@ -73,8 +74,6 @@ public class GrepView extends ViewPart implements IAdaptable {
 	public static final String VIEW_ID = "com.github.fabeclipse.textedgrep.grepview";
 
 	private static final String KEY_HIGHLIGHTMULTIPLE = "highlightmultiple";
-
-	private static final String[] LINE_DELIMITERS = {"\n", "\r\n", "\r"};
 
 	private static final String KEY_REGEX_HISTORY = "regexhistory";
 
@@ -225,7 +224,7 @@ public class GrepView extends ViewPart implements IAdaptable {
 		cursorLinePainter.setHighlightColor(highlightColor);
 		viewer.addPainter(cursorLinePainter);
 
-		viewer.setDocument(new DocumentClone("grep result", LINE_DELIMITERS));
+		viewer.setDocument(new Document("grep result"));
 
 		// track cursor line and synchronise the cursor position in the editor
 		viewer.getTextWidget().addCaretListener(new CaretListener() {
@@ -495,7 +494,7 @@ public class GrepView extends ViewPart implements IAdaptable {
 		}
 		DocumentGrepTarget target = new GrepTool.DocumentGrepTarget(textEd);
 		grepContext = grepTool.grep(target, hmAction.isChecked());
-		DocumentClone document = new DocumentClone(grepContext.getText(), LINE_DELIMITERS);
+		Document document = new Document(grepContext.getText());
 		viewer.setDocument(document);
 		int lines = document.getNumberOfLines();
 		try {
