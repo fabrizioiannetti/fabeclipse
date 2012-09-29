@@ -229,6 +229,7 @@ public class GrepTool {
 			}
 			lineNum++;
 		}
+		formatter.close();
 		// remove trailing newline
 		if (grep.length() > 0)
 			grep.deleteCharAt(grep.length()-1);

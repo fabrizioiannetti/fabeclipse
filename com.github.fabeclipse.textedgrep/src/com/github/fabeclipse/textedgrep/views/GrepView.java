@@ -587,4 +587,8 @@ public class GrepView extends ViewPart implements IAdaptable {
 		}
 		return object;
 	}
+
+	public void setGrepRegularExpression(String text) {
+		regexpText.setText(text);
+	}
 }
