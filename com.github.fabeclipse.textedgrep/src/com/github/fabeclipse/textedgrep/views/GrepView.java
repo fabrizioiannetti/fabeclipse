@@ -251,13 +251,14 @@ public class GrepView extends ViewPart implements IAdaptable {
 		});
 
 		IMenuManager menuManager = getViewSite().getActionBars().getMenuManager();
-		menuManager.add(new Action("Grep") {
+		grepAction = new Action("Grep") {
 			@Override
 			public void run() {
 				doGrep();
 				viewer.getControl().setFocus();
 			}
-		});
+		};
+		menuManager.add(grepAction);
 		csAction = new Action("Case Sensitive", Action.AS_CHECK_BOX) {};
 		csAction.setChecked(initialCaseSensitivity);
 		menuManager.add(csAction);
@@ -484,6 +485,8 @@ public class GrepView extends ViewPart implements IAdaptable {
 	}
 
 	private AtomicBoolean grepRunning = new AtomicBoolean();
+
+	private Action grepAction;
 	/**
 	 * Filter the content of the currently watched editor using
 	 * the regular expression in the text box.
@@ -492,6 +495,8 @@ public class GrepView extends ViewPart implements IAdaptable {
 	 */
 	private void doGrep() {
 		if(grepRunning.compareAndSet(false, true)) {
+			regexpText.setEnabled(false);
+			grepAction.setEnabled(false);
 			lastRegex = regexpText.getText();
 			grepTool = new GrepTool(lastRegex, csAction.isChecked());
 			IWorkbenchWindow window = getViewSite().getWorkbenchWindow();
@@ -512,6 +517,8 @@ public class GrepView extends ViewPart implements IAdaptable {
 							public void run() {
 								setGrepResult();
 								grepRunning.set(false);
+								regexpText.setEnabled(true);
+								grepAction.setEnabled(true);
 							}
 						});
 					}
