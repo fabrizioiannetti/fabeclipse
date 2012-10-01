@@ -2,8 +2,13 @@ package com.github.fabeclipse.textedgrep.views;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.core.runtime.IAdaptable;
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.Status;
+import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.jface.action.Action;
 import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.dialogs.InputDialog;
@@ -478,6 +483,7 @@ public class GrepView extends ViewPart implements IAdaptable {
 		viewer.getControl().setFocus();
 	}
 
+	private AtomicBoolean grepRunning = new AtomicBoolean();
 	/**
 	 * Filter the content of the currently watched editor using
 	 * the regular expression in the text box.
@@ -485,15 +491,38 @@ public class GrepView extends ViewPart implements IAdaptable {
 	 * The resulting text is shown in the text viewer.
 	 */
 	private void doGrep() {
-		lastRegex = regexpText.getText();
-		grepTool = new GrepTool(lastRegex, csAction.isChecked());
-		IWorkbenchWindow window = getViewSite().getWorkbenchWindow();
-		IEditorPart activeEditor = window.getActivePage().getActiveEditor();
-		if (activeEditor instanceof AbstractTextEditor) {
-			textEd = (AbstractTextEditor) activeEditor;
+		if(grepRunning.compareAndSet(false, true)) {
+			lastRegex = regexpText.getText();
+			grepTool = new GrepTool(lastRegex, csAction.isChecked());
+			IWorkbenchWindow window = getViewSite().getWorkbenchWindow();
+			IEditorPart activeEditor = window.getActivePage().getActiveEditor();
+			if (activeEditor instanceof AbstractTextEditor) {
+				textEd = (AbstractTextEditor) activeEditor;
+			}
+			final DocumentGrepTarget target = new GrepTool.DocumentGrepTarget(textEd);
+			Job grepJob = new Job("grep") {
+				@Override
+				protected IStatus run(IProgressMonitor monitor) {
+					try {
+						grepContext = grepTool.grep(target, hmAction.isChecked());
+					} catch (Exception e) {
+					} finally {
+						Display.getDefault().asyncExec(new Runnable() {
+							@Override
+							public void run() {
+								setGrepResult();
+								grepRunning.set(false);
+							}
+						});
+					}
+					return Status.OK_STATUS;
+				}
+			};
+			grepJob.schedule();
 		}
-		DocumentGrepTarget target = new GrepTool.DocumentGrepTarget(textEd);
-		grepContext = grepTool.grep(target, hmAction.isChecked());
+	}
+
+	private void setGrepResult() {
 		Document document = new Document(grepContext.getText());
 		viewer.setDocument(document);
 		int lines = document.getNumberOfLines();
