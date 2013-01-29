@@ -20,6 +20,7 @@ public class GrepTool {
 		public void start();
 		public void stop();
 
+		public int lineCount();
 		// to iterate on target lines
 		public boolean hasNextLine();
 		public String nextLine();
@@ -29,18 +30,37 @@ public class GrepTool {
 		public int getLineOffset(int line);
 	}
 
+	public static interface IGrepMonitor {
+		public void setProgress(int percent);
+	}
+	
 	public static class DocumentGrepTarget implements IGrepTarget {
 
 		private final IDocument document;
 		private Scanner scanner;
-		
+		private final int lineCount;
+
 		public DocumentGrepTarget(AbstractTextEditor textEd) {
 			IEditorInput input = textEd.getEditorInput();
 			document = textEd.getDocumentProvider().getDocument(input);
+			int lc = 0;
+			try {
+				lc = document.getLineOfOffset(document.getLength());
+			} catch (BadLocationException e) {
+			} finally {
+				lineCount = lc;
+			}
 		}
 
 		public DocumentGrepTarget(IDocument document) {
 			this.document = document;
+			int lc = 0;
+			try {
+				lc = document.getLineOfOffset(document.getLength());
+			} catch (BadLocationException e) {
+			} finally {
+				lineCount = lc;
+			}
 		}
 
 		@Override
@@ -52,6 +72,11 @@ public class GrepTool {
 		public void stop() {
 			scanner.close();
 			scanner = null;
+		}
+		
+		@Override
+		public int lineCount() {
+			return lineCount;
 		}
 		@Override
 		public boolean hasNextLine() {
@@ -172,7 +197,7 @@ public class GrepTool {
 		this.caseSensitive = caseSensitive;
 	}
 
-	public GrepContext grep(IGrepTarget target, boolean multiple) {
+	public GrepContext grep(IGrepTarget target, boolean multiple, IGrepMonitor monitor) {
 		GrepContext grepContext = null;
 		// start with 10 thousands lines (in the grep result)
 		int[] lineMap = new int[INITIAL_LINE_BUFFER_COUNT];
@@ -187,6 +212,7 @@ public class GrepTool {
 		int grepLineNum = 0;
 		int matchNum = 0;
 		target.start();
+		int lc = target.lineCount();
 		while(target.hasNextLine()) {
 			String line = target.nextLine();
 			matcher.reset(line);
@@ -228,6 +254,8 @@ public class GrepTool {
 				if (!multiple) break;
 			}
 			lineNum++;
+//			if (monitor != null && lc > 0)
+//				monitor.setProgress((lineNum) * 100 / lc);
 		}
 		formatter.close();
 		// remove trailing newline
