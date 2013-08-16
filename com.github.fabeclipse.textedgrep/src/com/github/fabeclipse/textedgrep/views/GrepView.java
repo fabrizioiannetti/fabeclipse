@@ -27,7 +27,6 @@ import org.eclipse.jface.text.source.SourceViewer;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.CaretEvent;
 import org.eclipse.swt.custom.CaretListener;
-import org.eclipse.swt.custom.StackLayout;
 import org.eclipse.swt.custom.StyleRange;
 import org.eclipse.swt.events.KeyEvent;
 import org.eclipse.swt.events.KeyListener;
@@ -43,7 +42,6 @@ import org.eclipse.swt.widgets.Combo;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
-import org.eclipse.swt.widgets.ProgressBar;
 import org.eclipse.swt.widgets.Text;
 import org.eclipse.swt.widgets.ToolBar;
 import org.eclipse.swt.widgets.ToolItem;
@@ -65,7 +63,6 @@ import com.github.fabeclipse.textedgrep.Activator;
 import com.github.fabeclipse.textedgrep.GrepTool;
 import com.github.fabeclipse.textedgrep.GrepTool.DocumentGrepTarget;
 import com.github.fabeclipse.textedgrep.GrepTool.GrepContext;
-import com.github.fabeclipse.textedgrep.GrepTool.IGrepMonitor;
 
 /**
  * View to show the result of a grep operation on the
@@ -148,10 +145,6 @@ public class GrepView extends ViewPart implements IAdaptable {
 	private Composite findbar;
 	private List<String> regexHistory = new ArrayList<String>();
 
-	private Composite topBar;
-
-	private ProgressBar progressBar;
-
 	@Override
 	public void createPartControl(final Composite parent) {
 		GridLayout layout = new GridLayout(1, false);
@@ -159,18 +152,11 @@ public class GrepView extends ViewPart implements IAdaptable {
 		layout.marginHeight = 0;
 		layout.marginWidth = 0;
 
-		topBar = new Composite(parent, SWT.NONE);
-		topBar.setLayoutData(new GridData(SWT.FILL, SWT.BEGINNING, true, false));
-		StackLayout topBarLayout = new StackLayout();
-		topBar.setLayout(topBarLayout);
-		regexpText = new Combo(topBar, SWT.SINGLE);
-//		regexpText.setLayoutData(new GridData(SWT.FILL, SWT.BEGINNING, true, false));
+		regexpText = new Combo(parent, SWT.SINGLE);
+		regexpText.setLayoutData(new GridData(SWT.FILL, SWT.BEGINNING, true, false));
 		regexpText.setText(lastRegex);
 		setRegexHistoryInComboBox();
 
-		progressBar = new ProgressBar(topBar, SWT.NONE);
-		
-		topBarLayout.topControl = regexpText;
 		// when pressing ENTER in the regexp field do a grep
 		regexpText.addSelectionListener(new SelectionListener() {
 			@Override
@@ -345,7 +331,7 @@ public class GrepView extends ViewPart implements IAdaptable {
 		partService.addPartListener(partListener);
 
 		// make tab key to toggle between the regular expression text and the viewer
-		parent.setTabList(new Control[] {topBar/*regexpText*/, viewer.getControl(), topBar/*regexpText*/});
+		parent.setTabList(new Control[] {regexpText, viewer.getControl(), regexpText});
 	}
 
 	private void setRegexHistoryInComboBox() {
@@ -512,11 +498,6 @@ public class GrepView extends ViewPart implements IAdaptable {
 			regexpText.setEnabled(false);
 			grepAction.setEnabled(false);
 			lastRegex = regexpText.getText();
-			StackLayout layout = (StackLayout) topBar.getLayout();
-			layout.topControl = progressBar;
-			progressBar.setMaximum(100);
-			progressBar.setSelection(50);
-			topBar.layout();
 			grepTool = new GrepTool(lastRegex, csAction.isChecked());
 			IWorkbenchWindow window = getViewSite().getWorkbenchWindow();
 			IEditorPart activeEditor = window.getActivePage().getActiveEditor();
@@ -526,27 +507,9 @@ public class GrepView extends ViewPart implements IAdaptable {
 			final DocumentGrepTarget target = new GrepTool.DocumentGrepTarget(textEd);
 			Job grepJob = new Job("grep") {
 				@Override
-				protected IStatus run(final IProgressMonitor monitor) {
-					monitor.beginTask("grep", 100);
+				protected IStatus run(IProgressMonitor monitor) {
 					try {
-						IGrepMonitor grepMonitor = new IGrepMonitor() {
-							private int lastValue;
-							@Override
-							public void setProgress(final int percent) {
-								if (percent != lastValue) {
-									monitor.worked(percent - lastValue);
-									
-									lastValue = percent;
-									Display.getDefault().asyncExec(new Runnable() {
-										@Override
-										public void run() {
-											progressBar.setSelection(percent);
-										}
-									});
-								}
-							}
-						};
-						grepContext = grepTool.grep(target, hmAction.isChecked(), grepMonitor);
+						grepContext = grepTool.grep(target, hmAction.isChecked());
 					} catch (Exception e) {
 					} finally {
 						Display.getDefault().asyncExec(new Runnable() {
@@ -556,9 +519,6 @@ public class GrepView extends ViewPart implements IAdaptable {
 								grepRunning.set(false);
 								regexpText.setEnabled(true);
 								grepAction.setEnabled(true);
-								StackLayout layout = (StackLayout) topBar.getLayout();
-								layout.topControl = regexpText;
-								topBar.layout();
 							}
 						});
 					}
