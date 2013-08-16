@@ -30,6 +30,7 @@ import org.eclipse.swt.events.ModifyListener;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.graphics.Color;
+import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.RGB;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
@@ -590,5 +591,6 @@ public class GrepView extends ViewPart implements IAdaptable {
 
 	public void setGrepRegularExpression(String text) {
 		regexpText.setText(text);
+		regexpText.setSelection(new Point(0, text.length()));;
 	}
 }
