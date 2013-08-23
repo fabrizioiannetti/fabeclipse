@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<plugin>
+   <extension
+         point="org.eclipse.ui.editors">
+      <editor
+            class="com.github.fabrizioiannetti.largefileeditor.LargeFileEditor"
+            default="false"
+            id="com.github.fabrizioiannetti.largefileeditor.editor"
+            name="%com.github.fabrizioiannetti.largefiledeitor.editorname">
+      </editor>
+   </extension>
+
+</plugin>

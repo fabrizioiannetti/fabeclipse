@@ -1,0 +1,9 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: Large File Editor
+Bundle-SymbolicName: com.github.fabrizioiannetti.largefileeditor;singleton:=true
+Bundle-Version: 1.0.0.qualifier
+Bundle-Vendor: Fabrizio Iannetti
+Bundle-RequiredExecutionEnvironment: JavaSE-1.7
+Require-Bundle: org.eclipse.ui
+Import-Package: org.eclipse.core.runtime
