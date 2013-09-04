@@ -3,8 +3,11 @@ package com.github.fabrizioiannetti.largefileeditor;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.SeekableByteChannel;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
+import java.nio.file.StandardOpenOption;
 
 import org.eclipse.core.runtime.IProgressMonitor;
 
@@ -64,8 +67,29 @@ public class FileTextModel {
 		return index;
 	}
 
+	public static class LineOffsets {
+		public long start;
+		public long end;
+	}
+	public void getOffsetsForLine(int index, LineOffsets offsets) {
+		offsets.start = lineOffsets[index];
+		offsets.end = lineOffsets[index + 1];
+	}
+
 	public String getLine(int index) {
-		String line = "";
+		String line = "error";
+		LineOffsets lo = new LineOffsets();
+		getOffsetsForLine(index, lo);
+		try {
+			SeekableByteChannel byteChannel = Files.newByteChannel(textFile.toPath(), StandardOpenOption.READ);
+			byteChannel.position(lo.start);
+			ByteBuffer lineByteBuffer = ByteBuffer.allocate((int) (lo.end - lo.start));
+			byteChannel.read(lineByteBuffer);
+			line = new String(lineByteBuffer.array(), Charset.forName("US-ASCII"));
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		return line ;
 	}
 

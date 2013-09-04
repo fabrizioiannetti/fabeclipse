@@ -5,5 +5,7 @@ Bundle-SymbolicName: com.github.fabrizioiannetti.largefileeditor;singleton:=true
 Bundle-Version: 1.0.0.qualifier
 Bundle-Vendor: Fabrizio Iannetti
 Bundle-RequiredExecutionEnvironment: JavaSE-1.7
-Require-Bundle: org.eclipse.ui
+Require-Bundle: org.eclipse.ui,
+ org.eclipse.ui.workbench,
+ org.eclipse.ui.ide;bundle-version="3.9.0"
 Import-Package: org.eclipse.core.runtime
