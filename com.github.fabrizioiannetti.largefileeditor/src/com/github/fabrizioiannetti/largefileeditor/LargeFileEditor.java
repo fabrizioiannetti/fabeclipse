@@ -60,7 +60,7 @@ public class LargeFileEditor extends EditorPart {
 
 	@Override
 	public void createPartControl(Composite parent) {
-		viewer = new FileTextViewer(textFile, parent, SWT.NONE);
+		viewer = new FileTextViewer(textFile, parent, SWT.H_SCROLL | SWT.V_SCROLL);
 	}
 
 	@Override

@@ -58,11 +58,17 @@ public class FileTextModel {
 		if (offset < 0 || offset > length)
 			return -1;
 		int index = lineCount / 2;
+		int last = lineCount;
+		int first = 0;
 		while (!(lineOffsets[index] <= offset && offset < lineOffsets[index+1])) {
-			if (offset < lineOffsets[index])
-				index = index /2;
-			else
-				index = (lineCount + index) /2;
+			if (offset < lineOffsets[index]) {
+				last = index;
+				index = (first + index) /2;
+			}
+			else {
+				first = index;
+				index = (last + index) /2;
+			}
 		}
 		return index;
 	}
@@ -84,6 +90,29 @@ public class FileTextModel {
 			SeekableByteChannel byteChannel = Files.newByteChannel(textFile.toPath(), StandardOpenOption.READ);
 			byteChannel.position(lo.start);
 			ByteBuffer lineByteBuffer = ByteBuffer.allocate((int) (lo.end - lo.start));
+			int read = byteChannel.read(lineByteBuffer);
+			if (read > 0 && (lineByteBuffer.get(read - 1) == '\n' || lineByteBuffer.get(read - 1) == '\r'))
+				read--;
+			if (read > 0 && (lineByteBuffer.get(read - 1) == '\n' || lineByteBuffer.get(read - 1) == '\r'))
+				read--;
+			line = new String(lineByteBuffer.array(), 0, read, Charset.forName("US-ASCII"));
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return line ;
+	}
+
+	public long getLength() {
+		return length;
+	}
+
+	public String getText(long offset, int length) {
+		String line = "error";
+		try {
+			SeekableByteChannel byteChannel = Files.newByteChannel(textFile.toPath(), StandardOpenOption.READ);
+			byteChannel.position(offset);
+			ByteBuffer lineByteBuffer = ByteBuffer.allocate(length);
 			byteChannel.read(lineByteBuffer);
 			line = new String(lineByteBuffer.array(), Charset.forName("US-ASCII"));
 		} catch (IOException e) {
@@ -92,7 +121,6 @@ public class FileTextModel {
 		}
 		return line ;
 	}
-
 	private synchronized void setReady(int lineCount, long[] lineOffsets) {
 		this.lineCount = lineCount;
 		this.lineOffsets = lineOffsets;

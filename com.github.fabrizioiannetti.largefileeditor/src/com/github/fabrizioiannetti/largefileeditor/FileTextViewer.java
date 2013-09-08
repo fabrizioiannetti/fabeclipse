@@ -6,12 +6,13 @@ import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.jface.layout.GridLayoutFactory;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.widgets.Composite;
-import org.eclipse.swt.widgets.Text;
 
 public class FileTextViewer extends Composite {
 
+	private StyledText text;
 	private FileTextModel model;
 
 	private IProgressMonitor scanMonitor = new NullProgressMonitor() {
@@ -21,18 +22,16 @@ public class FileTextViewer extends Composite {
 				@Override
 				public void run() {
 					if (!isDisposed()) {
-						text.setText(model.getLine(0) + "\n" + model.getLine(1));
+						text.setContent(new FileTextContent(model));
 					}
 				}
 			});
 		}
 	};
-
-	private Text text;
 	
 	public FileTextViewer(File textFile, Composite parent, int style) {
-		super(parent, style);
-		text = new Text(parent, SWT.MULTI | SWT.FLAT);
+		super(parent, SWT.NONE);
+		text = new StyledText(parent, style | SWT.MULTI | SWT.READ_ONLY);
 		text.setText("parsing");
 		GridLayoutFactory.fillDefaults().generateLayout(parent);
 		text.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
