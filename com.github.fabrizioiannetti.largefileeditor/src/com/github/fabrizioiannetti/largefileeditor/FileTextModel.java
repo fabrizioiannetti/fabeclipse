@@ -23,6 +23,8 @@ import org.eclipse.core.runtime.IProgressMonitor;
  * @author Fabrizio Iannetti
  */
 public class FileTextModel {
+	private static final String FILE_FORMAT = "ISO-8859-1";
+
 	private File textFile;
 	
 	private int lineCount;
@@ -95,7 +97,7 @@ public class FileTextModel {
 				read--;
 			if (read > 0 && (lineByteBuffer.get(read - 1) == '\n' || lineByteBuffer.get(read - 1) == '\r'))
 				read--;
-			line = new String(lineByteBuffer.array(), 0, read, Charset.forName("US-ASCII"));
+			line = new String(lineByteBuffer.array(), 0, read, Charset.forName(FILE_FORMAT));
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -114,7 +116,7 @@ public class FileTextModel {
 			byteChannel.position(offset);
 			ByteBuffer lineByteBuffer = ByteBuffer.allocate(length);
 			byteChannel.read(lineByteBuffer);
-			line = new String(lineByteBuffer.array(), Charset.forName("US-ASCII"));
+			line = new String(lineByteBuffer.array(), Charset.forName(FILE_FORMAT));
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -149,7 +151,7 @@ public class FileTextModel {
 		public void run() {
 			char[] buf = new char[100000];
 			int readChars;
-			Charset charset = Charset.forName("US-ASCII");
+			Charset charset = Charset.forName(FILE_FORMAT);
 			try {
 				long fileLength = textFile.length();
 				monitor.beginTask("mapping lines in file", (int) (fileLength/lineOffsets.length));
