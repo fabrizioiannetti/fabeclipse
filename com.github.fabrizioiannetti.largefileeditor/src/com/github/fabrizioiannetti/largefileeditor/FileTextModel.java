@@ -59,6 +59,9 @@ public class FileTextModel {
 	public int getLineIndex(long offset) {
 		if (offset < 0 || offset > length)
 			return -1;
+		if (offset == length) {
+			return lineCount - 1;
+		}
 		int index = lineCount / 2;
 		int last = lineCount;
 		int first = 0;
@@ -138,9 +141,8 @@ public class FileTextModel {
 	 *
 	 */
 	private class FileTextScanner extends Thread {
-		private int lineCount;
+		private int lineCount = 1;
 		private long[] lineOffsets = new long[1000000];
-		private long currentLineOffset;
 		private IProgressMonitor monitor;
 
 		public FileTextScanner(IProgressMonitor monitor) {
@@ -178,10 +180,9 @@ public class FileTextModel {
 			for (int i = 0 ; i < readChars ; i++) {
 				if (buf[i] == '\n') {
 					// line terminated, add line offset
-					addLineOffset(currentLineOffset);
+					addLineOffset(bufOffset + i + 1);
 					lineCount++;
 					// set current offset to next line (after \n)
-					currentLineOffset = bufOffset + i + 1;
 				}
 			}
 		}
@@ -194,8 +195,10 @@ public class FileTextModel {
 				System.arraycopy(lineOffsets, 0, newLineOffsets, 0, lineOffsets.length);
 				lineOffsets = newLineOffsets;
 			}
-			// insert offset and increase count
+			// insert offset
 			lineOffsets[lineCount] = offset;
+			//debug only
+			//System.out.println("LOFF@" + lineCount + "=" + offset);
 		}
 	}
 }
