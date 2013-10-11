@@ -4,7 +4,10 @@ import java.io.File;
 import java.net.URI;
 
 import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.jface.layout.GridDataFactory;
+import org.eclipse.jface.layout.GridLayoutFactory;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.IEditorSite;
@@ -60,12 +63,13 @@ public class LargeFileEditor extends EditorPart {
 
 	@Override
 	public void createPartControl(Composite parent) {
+		parent.setLayout(GridLayoutFactory.fillDefaults().create());
 		viewer = new FileTextViewer(textFile, parent, SWT.H_SCROLL | SWT.V_SCROLL);
+		viewer.setLayoutData(GridDataFactory.fillDefaults().grab(true, true).create());
 	}
 
 	@Override
 	public void setFocus() {
 		viewer.setFocus();
 	}
-
 }
