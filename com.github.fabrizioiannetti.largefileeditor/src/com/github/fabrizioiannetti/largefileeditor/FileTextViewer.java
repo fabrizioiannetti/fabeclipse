@@ -7,6 +7,7 @@ import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.jface.layout.GridLayoutFactory;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.StyledText;
+import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.widgets.Composite;
 
@@ -45,5 +46,11 @@ public class FileTextViewer extends Composite {
 		super.dispose();
 		// cancel file parsing
 		scanMonitor.setCanceled(true);
+	}
+	
+	@Override
+	public void setFont(Font font) {
+		super.setFont(font);
+		text.setFont(font);
 	}
 }
