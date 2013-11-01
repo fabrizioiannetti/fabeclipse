@@ -18,16 +18,14 @@ public class GrepCommand extends AbstractHandler {
 	public Object execute(ExecutionEvent event) throws ExecutionException {
 		String text = null;
 		ISelection selection = HandlerUtil.getActiveMenuSelection(event);
-		System.out.println("activemenu selection:" + selection);
 		selection = HandlerUtil.getCurrentSelection(event);
-		System.out.println("current selection:" + selection);
 		if (selection instanceof ITextSelection) {
 			ITextSelection textSelection = (ITextSelection) selection;
 			text = textSelection.getText();
 		}
 		try {
 			IViewPart view = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage().showView(GrepView.VIEW_ID);
-			if (text != null)
+			if (text != null && text.length() > 0)
 				((GrepView)view).setGrepRegularExpression(text);
 		} catch (PartInitException e) {
 			// TODO Auto-generated catch block
