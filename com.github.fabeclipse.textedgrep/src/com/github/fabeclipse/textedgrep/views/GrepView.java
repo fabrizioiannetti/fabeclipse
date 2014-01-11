@@ -30,11 +30,9 @@ import org.eclipse.swt.events.ModifyListener;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.graphics.Color;
-import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.RGB;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
-import org.eclipse.swt.widgets.Combo;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
@@ -67,15 +65,11 @@ import com.github.fabeclipse.textedgrep.GrepTool.GrepContext;
  * @author fabrizio iannetti
  */
 public class GrepView extends ViewPart implements IAdaptable {
-
-	private static final String GREPREGEX = "grepregex";
-
-	private static final String KEY_CASESENSITIVE = "casesensitive";
-
 	public static final String VIEW_ID = "com.github.fabeclipse.textedgrep.grepview";
 
+	private static final String GREPREGEX = "grepregex";
+	private static final String KEY_CASESENSITIVE = "casesensitive";
 	private static final String KEY_HIGHLIGHTMULTIPLE = "highlightmultiple";
-
 	private static final String KEY_REGEX_HISTORY = "regexhistory";
 
 	/**
@@ -92,7 +86,6 @@ public class GrepView extends ViewPart implements IAdaptable {
 	private GrepContext grepContext;
 	private AbstractTextEditor textEd;
 	private Color highlightColor;
-	private Combo regexpText;
 	private boolean initialCaseSensitivity;
 
 	// index of last successful search
@@ -131,15 +124,16 @@ public class GrepView extends ViewPart implements IAdaptable {
 	};
 
 	private Action linkToEditorAction;
-
 	private Action csAction;
+	private Action hmAction;
 
 	private boolean initialHighlightMultiple;
 
-	private Action hmAction;
-
 	private Composite findbar;
 	private List<String> regexHistory = new ArrayList<String>();
+
+	// regex text entry, should become an extendible list
+	private RegexEntry regexEntry;
 
 	@Override
 	public void createPartControl(final Composite parent) {
@@ -148,23 +142,13 @@ public class GrepView extends ViewPart implements IAdaptable {
 		layout.marginHeight = 0;
 		layout.marginWidth = 0;
 
-		regexpText = new Combo(parent, SWT.SINGLE);
-		regexpText.setLayoutData(new GridData(SWT.FILL, SWT.BEGINNING, true, false));
-		regexpText.setText(lastRegex);
-		setRegexHistoryInComboBox();
-
 		// when pressing ENTER in the regexp field do a grep
-		regexpText.addSelectionListener(new SelectionListener() {
+		IRegexEntryListener listener = new IRegexEntryListener() {
 			@Override
-			public void widgetSelected(SelectionEvent e) {
-				// this is never called for Text
-			}
-			@Override
-			public void widgetDefaultSelected(SelectionEvent e) {
+			public void grep(String text) {
 				// the user pressed ENTER
 				doGrep();
 				viewer.getControl().setFocus();
-				String text = regexpText.getText();
 				// add regex to history if:
 				// * not empty
 				// * history is empty, or last element of history is not the same
@@ -175,19 +159,13 @@ public class GrepView extends ViewPart implements IAdaptable {
 					setRegexHistoryInComboBox();
 				}
 			}
-		});
+		};
 
-// remove this as the combo triggers the drop down with the arrow down key
-//		regexpText.addKeyListener(new KeyListener() {
-//			@Override
-//			public void keyReleased(KeyEvent e) {
-//				// key down modes to the grep viewer
-//				if (e.keyCode == SWT.ARROW_DOWN)
-//					viewer.getControl().setFocus();
-//			}
-//			@Override
-//			public void keyPressed(KeyEvent e) {}
-//		});
+		
+		regexEntry = new RegexEntry(parent, listener);
+		regexEntry.setLayoutData(new GridData(SWT.FILL, SWT.BEGINNING, true, false));
+		regexEntry.setRegexpText(lastRegex);
+		setRegexHistoryInComboBox();
 
 		// vertical ruler that shows the original's line number
 		CompositeRuler ruler = new CompositeRuler();
@@ -326,14 +304,14 @@ public class GrepView extends ViewPart implements IAdaptable {
 		partService.addPartListener(partListener);
 
 		// make tab key to toggle between the regular expression text and the viewer
-		parent.setTabList(new Control[] {regexpText, viewer.getControl(), regexpText});
+		parent.setTabList(new Control[] {regexEntry, viewer.getControl(), regexEntry});
 	}
 
 	private void setRegexHistoryInComboBox() {
 		String[] harray = new String[regexHistory.size()];
 		for (int i = 0; i < harray.length; i++)
 			harray[i] = regexHistory.get(harray.length - i - 1);
-		regexpText.setItems(harray);
+		regexEntry.setRegexHistory(harray);
 	}
 
 	private void createFindbar(final Composite parent) {
@@ -486,7 +464,7 @@ public class GrepView extends ViewPart implements IAdaptable {
 	 * The resulting text is shown in the text viewer.
 	 */
 	private void doGrep() {
-		lastRegex = regexpText.getText();
+		lastRegex = regexEntry.getRegexpText();
 		grepTool = new GrepTool(lastRegex, csAction.isChecked());
 		IWorkbenchWindow window = getViewSite().getWorkbenchWindow();
 		IEditorPart activeEditor = window.getActivePage().getActiveEditor();
@@ -506,7 +484,7 @@ public class GrepView extends ViewPart implements IAdaptable {
 			// to save some memory, the real ranges are
 			// in the integer arrays
 			StyleRange matchHighLightStyle = new StyleRange();
-			matchHighLightStyle.background = viewer.getTextWidget().getDisplay().getSystemColor(SWT.COLOR_YELLOW);
+			matchHighLightStyle.background = regexEntry.getRegexColor();
 			for (int i = 0, j = 0 ; i < lines ; i++) {
 				int nm = grepContext.getNumberOfMatchesForGrepLine(i);
 				for (int k = 0 ; k < nm ; k++) {
@@ -525,7 +503,7 @@ public class GrepView extends ViewPart implements IAdaptable {
 
 	@Override
 	public void setFocus() {
-		regexpText.setFocus();
+		regexEntry.setFocus();
 	}
 
 	@Override
@@ -581,16 +559,15 @@ public class GrepView extends ViewPart implements IAdaptable {
 	@Override
 	public Object getAdapter(Class adapter) {
 		Object object = super.getAdapter(adapter);
-		System.out.println(adapter + "->" + object);
+//		System.out.println(adapter + "->" + object);
 		if (object == null && adapter.equals(IFindReplaceTarget.class)) {
 			object = viewer.getFindReplaceTarget();
-			System.out.println("     ->" + object);
+//			System.out.println("     ->" + object);
 		}
 		return object;
 	}
 
 	public void setGrepRegularExpression(String text) {
-		regexpText.setText(text);
-		regexpText.setSelection(new Point(0, text.length()));;
+		regexEntry.setRegexpText(text, true);
 	}
 }
