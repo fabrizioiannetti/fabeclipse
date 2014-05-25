@@ -49,7 +49,7 @@ public class FileTextModel {
 	}
 
 	public synchronized boolean isReady() {
-		return textScanner == null || textScanner.isAlive();
+		return textScanner == null || !textScanner.isAlive();
 	}
 
 	public int getLineCount() {
@@ -88,14 +88,16 @@ public class FileTextModel {
 	}
 
 	public String getLine(int index) {
+		SeekableByteChannel byteChannel = null;
 		String line = "error";
 		LineOffsets lo = new LineOffsets();
 		getOffsetsForLine(index, lo);
 		try {
-			SeekableByteChannel byteChannel = Files.newByteChannel(textFile.toPath(), StandardOpenOption.READ);
+			byteChannel = Files.newByteChannel(textFile.toPath(), StandardOpenOption.READ);
 			byteChannel.position(lo.start);
 			ByteBuffer lineByteBuffer = ByteBuffer.allocate((int) (lo.end - lo.start));
 			int read = byteChannel.read(lineByteBuffer);
+			// do not take line terminator in the line string
 			if (read > 0 && (lineByteBuffer.get(read - 1) == '\n' || lineByteBuffer.get(read - 1) == '\r'))
 				read--;
 			if (read > 0 && (lineByteBuffer.get(read - 1) == '\n' || lineByteBuffer.get(read - 1) == '\r'))
@@ -104,6 +106,14 @@ public class FileTextModel {
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+		} finally {
+			if (byteChannel != null)
+				try {
+					byteChannel.close();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 		}
 		return line ;
 	}
@@ -154,11 +164,12 @@ public class FileTextModel {
 			char[] buf = new char[100000];
 			int readChars;
 			Charset charset = Charset.forName(FILE_FORMAT);
+			BufferedReader reader = null;
 			try {
 				long fileLength = textFile.length();
 				monitor.beginTask("mapping lines in file", (int) (fileLength/lineOffsets.length));
 				long bufOffset = 0;
-				BufferedReader reader = Files.newBufferedReader(textFile.toPath(), charset);
+				reader = Files.newBufferedReader(textFile.toPath(), charset);
 				// read until EOF
 				while ((readChars = reader.read(buf)) >= 0) {
 					parseBuffer(buf, readChars, bufOffset);
@@ -171,6 +182,14 @@ public class FileTextModel {
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
+			} finally {
+				if (reader != null)
+					try {
+						reader.close();
+					} catch (IOException e) {
+						// nothing we can do...
+						e.printStackTrace();
+					}
 			}
 			monitor.done();
 			setReady(lineCount, lineOffsets);

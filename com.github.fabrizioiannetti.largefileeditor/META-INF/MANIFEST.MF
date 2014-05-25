@@ -1,12 +1,12 @@
 Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
-Bundle-Name: Large File Editor
+Bundle-Name: %Bundle-Name
 Bundle-SymbolicName: com.github.fabrizioiannetti.largefileeditor;singleton:=true
 Bundle-Version: 1.0.0.qualifier
-Bundle-Vendor: Fabrizio Iannetti
+Bundle-Vendor: %Bundle-Vendor
 Bundle-RequiredExecutionEnvironment: JavaSE-1.7
 Require-Bundle: org.eclipse.ui,
  org.eclipse.ui.workbench,
  org.eclipse.ui.ide;bundle-version="3.9.0",
- org.eclipse.osgi;bundle-version="3.10.0"
+ org.eclipse.osgi;bundle-version="3.9.0"
 Import-Package: org.eclipse.core.runtime
