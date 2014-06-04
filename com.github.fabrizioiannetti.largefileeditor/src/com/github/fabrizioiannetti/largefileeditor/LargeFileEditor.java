@@ -2,22 +2,31 @@ package com.github.fabrizioiannetti.largefileeditor;
 
 import java.io.File;
 import java.net.URI;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.jface.action.IAction;
 import org.eclipse.jface.layout.GridDataFactory;
 import org.eclipse.jface.layout.GridLayoutFactory;
 import org.eclipse.jface.resource.JFaceResources;
+import org.eclipse.jface.text.IFindReplaceTarget;
 import org.eclipse.jface.util.IPropertyChangeListener;
 import org.eclipse.jface.util.PropertyChangeEvent;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.IEditorSite;
 import org.eclipse.ui.IURIEditorInput;
+import org.eclipse.ui.IWorkbenchCommandConstants;
 import org.eclipse.ui.PartInitException;
+import org.eclipse.ui.actions.ActionFactory;
 import org.eclipse.ui.part.EditorPart;
+import org.eclipse.ui.texteditor.FindReplaceAction;
+import org.eclipse.ui.texteditor.IAbstractTextEditorHelpContextIds;
 
-public class LargeFileEditor extends EditorPart {
+public class LargeFileEditor extends EditorPart implements IFindReplaceTarget {
 
 	private File textFile;
 	private FileTextViewer viewer;
@@ -92,6 +101,36 @@ public class LargeFileEditor extends EditorPart {
 		viewer.setLayoutData(GridDataFactory.fillDefaults().grab(true, true).create());
 		viewer.setFont(JFaceResources.getTextFont());
 		JFaceResources.getFontRegistry().addListener(fFontPropertyChangeListener);
+		
+		createActions();
+	}
+
+	private void createActions() {
+		FindReplaceAction action = new FindReplaceAction(new LargeFileEditorMessages(), null, this); //$NON-NLS-1$
+		action.setHelpContextId(IAbstractTextEditorHelpContextIds.FIND_ACTION);
+		action.setActionDefinitionId(IWorkbenchCommandConstants.EDIT_FIND_AND_REPLACE);
+		putAction(ActionFactory.FIND.getId(), action);
+	}
+
+	private Map<String, IAction> fActions = new HashMap<String, IAction>();
+
+	private void putAction(String key, IAction action) {
+		fActions.put(key, action);
+	}
+
+	/**
+	 * Get an action implemented by this editor by id.
+	 * 
+	 * Currently implemented:
+	 * <ul>
+	 * <li> find, with id {@link ActionFactory.FIND.getId()}
+	 * </ul>
+	 * 
+	 * @param actionId
+	 * @return
+	 */
+	public IAction getAction(String actionId) {
+		return fActions.get(actionId);
 	}
 
 	@Override
@@ -103,5 +142,42 @@ public class LargeFileEditor extends EditorPart {
 	public void dispose() {
 		super.dispose();
 		JFaceResources.getFontRegistry().removeListener(fFontPropertyChangeListener);
+	}
+
+	@Override
+	public boolean canPerformFind() {
+		return true;
+	}
+
+	@Override
+	public int findAndSelect(int widgetOffset, String findString,
+			boolean searchForward, boolean caseSensitive, boolean wholeWord) {
+		// TODO implement search
+		return widgetOffset;
+	}
+
+	@Override
+	public Point getSelection() {
+		// limit to a single line
+		Point selection = viewer.getSelectionMaxOneLine();
+		return selection;
+	}
+
+	@Override
+	public String getSelectionText() {
+		// limit to a single line
+		String text = viewer.getSelectionTextMaxOneLine();
+		return text;
+	}
+
+	@Override
+	public boolean isEditable() {
+		// edit not supported
+		return false;
+	}
+
+	@Override
+	public void replaceSelection(String text) {
+		// edit not supported
 	}
 }

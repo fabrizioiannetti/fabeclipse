@@ -220,4 +220,24 @@ public class FileTextModel {
 			//System.out.println("LOFF@" + lineCount + "=" + offset);
 		}
 	}
+
+	public interface IFindMonitor {
+		/**
+		 * 
+		 * @param start start offset of the occurrence
+		 * @param string the text that was found.
+		 * @return true if search should be repeated
+		 */
+		public boolean onFind(long start, String string);
+	}
+	public long findString(String string, long start, boolean caseSensitive, boolean forward, IProgressMonitor monitor) {
+		if (monitor != null)
+			monitor.beginTask("searching: " + string, getLineCount());
+		if (!isReady()) {
+			monitor.done();
+			return -1;
+		}
+		monitor.done();
+		return -1; // not found
+	}
 }

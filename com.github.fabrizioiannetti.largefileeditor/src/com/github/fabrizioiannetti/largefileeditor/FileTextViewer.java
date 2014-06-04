@@ -8,8 +8,11 @@ import org.eclipse.jface.layout.GridLayoutFactory;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.graphics.Font;
+import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.widgets.Composite;
+
+import com.github.fabrizioiannetti.largefileeditor.FileTextModel.LineOffsets;
 
 public class FileTextViewer extends Composite {
 
@@ -59,4 +62,26 @@ public class FileTextViewer extends Composite {
 		super.setFont(font);
 		text.setFont(font);
 	}
+
+	public Point getSelectionMaxOneLine() {
+		Point selection = text.getSelection();
+		int lineIndex = model.getLineIndex(selection.x);
+		LineOffsets offsets = new LineOffsets();
+		model.getOffsetsForLine(lineIndex, offsets);
+		if (selection.y > offsets.end)
+			selection.y = (int) offsets.end;
+		return selection;
+	}
+	
+	public String getSelectionTextMaxOneLine() {
+		Point selection = text.getSelection();
+		int index = model.getLineIndex(selection.x);
+		LineOffsets offsets = new LineOffsets();
+		model.getOffsetsForLine(index, offsets);
+		if (selection.y > offsets.end)
+			selection.y = (int) offsets.end;
+		String line = model.getLine(index);
+		return line.substring(selection.x, selection.y);
+	}
+	
 }

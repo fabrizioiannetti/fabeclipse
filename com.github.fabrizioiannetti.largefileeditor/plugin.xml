@@ -5,6 +5,7 @@
          point="org.eclipse.ui.editors">
       <editor
             class="com.github.fabrizioiannetti.largefileeditor.LargeFileEditor"
+            contributorClass="com.github.fabrizioiannetti.largefileeditor.LargeFileEditorActionContributor"
             default="false"
             id="com.github.fabrizioiannetti.largefileeditor.editor"
             name="%com.github.fabrizioiannetti.largefiledeitor.editorname">
