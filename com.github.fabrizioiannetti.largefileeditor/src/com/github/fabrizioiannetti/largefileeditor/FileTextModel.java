@@ -230,14 +230,55 @@ public class FileTextModel {
 		 */
 		public boolean onFind(long start, String string);
 	}
+
 	public long findString(String string, long start, boolean caseSensitive, boolean forward, IProgressMonitor monitor) {
+		int count = getLineCount();
 		if (monitor != null)
-			monitor.beginTask("searching: " + string, getLineCount());
+			monitor.beginTask("searching: " + string, count);
 		if (!isReady()) {
-			monitor.done();
+			if (monitor != null)
+				monitor.done();
 			return -1;
 		}
-		monitor.done();
-		return -1; // not found
+		if (string == null || string.length() == 0) {
+			if (monitor != null)
+				monitor.done();
+			return start;
+		}
+		long pos = -1;
+		int lineIndex = getLineIndex(start);
+		int inc = forward ? 1 : -1;
+lineloop:
+		for (; lineIndex < count ; lineIndex += inc) {
+			String line = getLine(lineIndex);
+			int i;
+			if (forward)
+				i = line.indexOf(string);
+			else
+				i = line.lastIndexOf(string);
+			while (i >= 0) {
+				// string found on this line
+				LineOffsets offsets = new LineOffsets();
+				getOffsetsForLine(lineIndex, offsets);
+				// check that the found string is actually:
+				// * after the start when searching forward
+				// * before the start when searching backwards
+				if (( forward && offsets.start + i >= start) ||
+					(!forward && offsets.start + i <= start)){
+					pos = offsets.start + i;
+					if (monitor != null && monitor instanceof IFindMonitor)
+						((IFindMonitor)monitor).onFind(pos, string);
+					break lineloop;
+				} else {
+					if (forward)
+						i = line.indexOf(string, i + 1);
+					else
+						i = line.lastIndexOf(string, i - 1);
+				}
+			}
+		}
+		if (monitor != null)
+			monitor.done();
+		return pos ; // not found
 	}
 }

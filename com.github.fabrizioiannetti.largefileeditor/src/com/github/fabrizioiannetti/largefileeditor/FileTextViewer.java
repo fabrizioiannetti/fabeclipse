@@ -81,7 +81,16 @@ public class FileTextViewer extends Composite {
 		if (selection.y > offsets.end)
 			selection.y = (int) offsets.end;
 		String line = model.getLine(index);
+		if (selection.y > line.length())
+			return line.substring(selection.x);
 		return line.substring(selection.x, selection.y);
 	}
-	
+
+	void setSelection(int start, int end) {
+		text.setSelection(start, end);
+	}
+
+	public FileTextModel getModel() {
+		return model;
+	}
 }

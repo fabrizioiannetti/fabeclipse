@@ -152,8 +152,12 @@ public class LargeFileEditor extends EditorPart implements IFindReplaceTarget {
 	@Override
 	public int findAndSelect(int widgetOffset, String findString,
 			boolean searchForward, boolean caseSensitive, boolean wholeWord) {
-		// TODO implement search
-		return widgetOffset;
+		FileTextModel model = viewer.getModel();
+		long pos = model.findString(findString, widgetOffset, caseSensitive, searchForward, null);
+		if (pos >= 0) {
+			viewer.setSelection((int) pos, (int) pos + findString.length());
+		}
+		return (int) pos;
 	}
 
 	@Override
