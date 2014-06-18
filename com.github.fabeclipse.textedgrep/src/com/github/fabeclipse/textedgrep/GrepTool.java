@@ -8,6 +8,7 @@ import java.util.regex.Pattern;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.ui.IEditorInput;
+import org.eclipse.ui.IWorkbenchPart;
 import org.eclipse.ui.texteditor.AbstractTextEditor;
 
 public class GrepTool {
@@ -24,19 +25,27 @@ public class GrepTool {
 		public boolean hasNextLine();
 		public String nextLine();
 
+		// to sync grep view selection with target's one
+		public void select(int start, int length);
+		
 		// utility: just used to get the original offset
 		// TODO: should not be part of the interface
 		public int getLineOffset(int line);
+
+		public boolean isSame(IWorkbenchPart part);
+		public String getTitle();
 	}
 
 	public static class DocumentGrepTarget implements IGrepTarget {
 
 		private final IDocument document;
 		private Scanner scanner;
+		private AbstractTextEditor editor;
 		
 		public DocumentGrepTarget(AbstractTextEditor textEd) {
 			IEditorInput input = textEd.getEditorInput();
 			document = textEd.getDocumentProvider().getDocument(input);
+			editor = textEd;
 		}
 
 		public DocumentGrepTarget(IDocument document) {
@@ -71,6 +80,21 @@ public class GrepTool {
 				// just return -1 as bad location
 			}
 			return offset;
+		}
+
+		@Override
+		public void select(int start, int length) {
+			editor.selectAndReveal(start, length);
+		}
+
+		@Override
+		public boolean isSame(IWorkbenchPart part) {
+			return part == editor;
+		}
+
+		@Override
+		public String getTitle() {
+			return editor.getTitle();
 		}
 		
 	}

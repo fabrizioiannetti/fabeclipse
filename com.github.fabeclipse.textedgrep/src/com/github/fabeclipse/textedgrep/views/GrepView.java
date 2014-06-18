@@ -55,8 +55,8 @@ import org.eclipse.ui.texteditor.AbstractTextEditor;
 
 import com.github.fabeclipse.textedgrep.Activator;
 import com.github.fabeclipse.textedgrep.GrepTool;
-import com.github.fabeclipse.textedgrep.GrepTool.DocumentGrepTarget;
 import com.github.fabeclipse.textedgrep.GrepTool.GrepContext;
+import com.github.fabeclipse.textedgrep.GrepTool.IGrepTarget;
 
 /**
  * View to show the result of a grep operation on the
@@ -84,7 +84,7 @@ public class GrepView extends ViewPart implements IAdaptable {
 	private String lastRegex;
 	private GrepTool grepTool;
 	private GrepContext grepContext;
-	private AbstractTextEditor textEd;
+//	private IEditorPart textEd;
 	private Color highlightColor;
 	private boolean initialCaseSensitivity;
 
@@ -115,7 +115,7 @@ public class GrepView extends ViewPart implements IAdaptable {
 		@Override
 		public void partActivated(IWorkbenchPartReference partRef) {
 			IWorkbenchPart part = partRef.getPart(false);
-			if (linkToEditorAction.isChecked() && part instanceof EditorPart && part != textEd) {
+			if (linkToEditorAction.isChecked() && part instanceof EditorPart && !target.isSame(part)) {
 				// ok, it's a non null editor, and it is not the current one
 				// grep it
 				doGrep();
@@ -134,6 +134,8 @@ public class GrepView extends ViewPart implements IAdaptable {
 
 	// regex text entry, should become an extendible list
 	private RegexEntry regexEntry;
+
+	private IGrepTarget target;
 
 	@Override
 	public void createPartControl(final Composite parent) {
@@ -215,7 +217,7 @@ public class GrepView extends ViewPart implements IAdaptable {
 						int grepLine = viewer.getDocument().getLineOfOffset(caretOffset);
 						int line = grepContext.getOriginalLine(grepLine);
 						int offset = grepContext.getTarget().getLineOffset(line);
-						textEd.selectAndReveal(offset, 0);
+						target.select(offset, 0);
 					} catch (BadLocationException e) {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
@@ -466,12 +468,11 @@ public class GrepView extends ViewPart implements IAdaptable {
 	private void doGrep() {
 		lastRegex = regexEntry.getRegexpText();
 		grepTool = new GrepTool(lastRegex, csAction.isChecked());
-		IWorkbenchWindow window = getViewSite().getWorkbenchWindow();
-		IEditorPart activeEditor = window.getActivePage().getActiveEditor();
-		if (activeEditor instanceof AbstractTextEditor) {
-			textEd = (AbstractTextEditor) activeEditor;
-		}
-		DocumentGrepTarget target = new GrepTool.DocumentGrepTarget(textEd);
+		updateTarget();
+
+		if (target == null)
+			return;
+
 		grepContext = grepTool.grep(target, hmAction.isChecked());
 		Document document = new Document(grepContext.getText());
 		viewer.setDocument(document);
@@ -498,7 +499,18 @@ public class GrepView extends ViewPart implements IAdaptable {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		viewer.getControl().setToolTipText("source: " + textEd.getTitle());
+		viewer.getControl().setToolTipText("source: " + target.getTitle());
+	}
+
+	private void updateTarget() {
+		IWorkbenchWindow window = getViewSite().getWorkbenchWindow();
+		IEditorPart activeEditor = window.getActivePage().getActiveEditor();
+		IGrepTarget newTarget = (IGrepTarget) activeEditor.getAdapter(IGrepTarget.class);
+		if (newTarget == null && activeEditor instanceof AbstractTextEditor) {
+			newTarget = new GrepTool.DocumentGrepTarget((AbstractTextEditor) activeEditor);
+		}
+		if (newTarget != null)
+			target = newTarget;
 	}
 
 	@Override
