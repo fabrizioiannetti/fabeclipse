@@ -70,20 +70,25 @@ public class FileTextViewer extends Composite {
 		model.getOffsetsForLine(lineIndex, offsets);
 		if (selection.y > offsets.end)
 			selection.y = (int) offsets.end;
+		selection.y -= selection.x;
 		return selection;
 	}
 	
 	public String getSelectionTextMaxOneLine() {
 		Point selection = text.getSelection();
+		if (selection.x < 0 || selection.y < 0)
+			return "";
 		int index = model.getLineIndex(selection.x);
 		LineOffsets offsets = new LineOffsets();
 		model.getOffsetsForLine(index, offsets);
+		String line = model.getLine(index);
+		int start = selection.x - (int) offsets.start;
 		if (selection.y > offsets.end)
 			selection.y = (int) offsets.end;
-		String line = model.getLine(index);
-		if (selection.y > line.length())
-			return line.substring(selection.x);
-		return line.substring(selection.x, selection.y);
+		int end = selection.y - (int) offsets.start;
+		if (end > line.length())
+			return line.substring(start);
+		return line.substring(start, end);
 	}
 
 	void setSelection(int start, int end) {

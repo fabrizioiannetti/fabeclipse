@@ -81,6 +81,11 @@ public class FileTextModel {
 	public static class LineOffsets {
 		public long start;
 		public long end;
+		
+		@Override
+		public String toString() {
+			return "[" + start + "," + end + "]";
+		}
 	}
 	public void getOffsetsForLine(int index, LineOffsets offsets) {
 		offsets.start = lineOffsets[index];
@@ -264,7 +269,7 @@ lineloop:
 				// * after the start when searching forward
 				// * before the start when searching backwards
 				if (( forward && offsets.start + i >= start) ||
-					(!forward && offsets.start + i <= start)){
+					(!forward && offsets.start + i < start)){
 					pos = offsets.start + i;
 					if (monitor != null && monitor instanceof IFindMonitor)
 						((IFindMonitor)monitor).onFind(pos, string);
@@ -279,6 +284,6 @@ lineloop:
 		}
 		if (monitor != null)
 			monitor.done();
-		return pos ; // not found
+		return pos;
 	}
 }
