@@ -56,7 +56,7 @@ import org.eclipse.ui.texteditor.AbstractTextEditor;
 import com.github.fabeclipse.textedgrep.Activator;
 import com.github.fabeclipse.textedgrep.GrepTool;
 import com.github.fabeclipse.textedgrep.GrepTool.GrepContext;
-import com.github.fabeclipse.textedgrep.GrepTool.IGrepTarget;
+import com.github.fabeclipse.textedgrep.IGrepTarget;
 
 /**
  * View to show the result of a grep operation on the
