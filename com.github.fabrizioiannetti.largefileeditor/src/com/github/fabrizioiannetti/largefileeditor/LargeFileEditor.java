@@ -26,6 +26,8 @@ import org.eclipse.ui.part.EditorPart;
 import org.eclipse.ui.texteditor.FindReplaceAction;
 import org.eclipse.ui.texteditor.IAbstractTextEditorHelpContextIds;
 
+import com.github.fabeclipse.textedgrep.IGrepTarget;
+
 public class LargeFileEditor extends EditorPart implements IFindReplaceTarget {
 
 	private File textFile;
@@ -133,6 +135,14 @@ public class LargeFileEditor extends EditorPart implements IFindReplaceTarget {
 		return fActions.get(actionId);
 	}
 
+	public void select(int start, int length) {
+		viewer.setSelection(start, start + length);
+	}
+
+	public FileTextViewer getViewer() {
+		return viewer;
+	}
+
 	@Override
 	public void setFocus() {
 		viewer.setFocus();
@@ -183,5 +193,13 @@ public class LargeFileEditor extends EditorPart implements IFindReplaceTarget {
 	@Override
 	public void replaceSelection(String text) {
 		// edit not supported
+	}
+	
+	@Override
+	public Object getAdapter(@SuppressWarnings("rawtypes") Class adapter) {
+		if (IGrepTarget.class.equals(adapter)) {
+			return new LargeFileGrepTarget(this);
+		}
+		return super.getAdapter(adapter);
 	}
 }
