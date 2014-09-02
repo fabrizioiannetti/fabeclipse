@@ -2,6 +2,9 @@ package com.github.fabeclipse.textedgrep;
 
 import org.eclipse.ui.IWorkbenchPart;
 
+/**
+ * @since 2.0
+ */
 public interface IGrepTarget {
 	// indicate start and stop of parsing
 	public void start();

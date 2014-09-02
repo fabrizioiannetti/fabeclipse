@@ -23,6 +23,7 @@ import org.eclipse.swt.widgets.Control;
  * </ul>
  * 
  * @author iannetti
+ * @since 2.0
  *
  */
 public class RegexEntry extends Composite {

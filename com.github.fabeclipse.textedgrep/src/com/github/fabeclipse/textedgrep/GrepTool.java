@@ -11,6 +11,9 @@ import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.IWorkbenchPart;
 import org.eclipse.ui.texteditor.AbstractTextEditor;
 
+/**
+ * @since 2.0
+ */
 public class GrepTool {
 
 	private static final int INCREMENT_LINE_BUFFER_COUNT = 10000;

@@ -3,6 +3,9 @@ package com.github.fabeclipse.textedgrep;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.osgi.framework.BundleContext;
 
+/**
+ * @since 2.0
+ */
 public class Activator extends AbstractUIPlugin {
 
 	public static final String PLUGIN_ID = "com.github.fabeclipse.textedgrep";
