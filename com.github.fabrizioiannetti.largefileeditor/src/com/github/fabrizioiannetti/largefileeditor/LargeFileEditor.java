@@ -22,6 +22,8 @@ import org.eclipse.ui.IURIEditorInput;
 import org.eclipse.ui.IWorkbenchCommandConstants;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.actions.ActionFactory;
+import org.eclipse.ui.contexts.IContextActivation;
+import org.eclipse.ui.contexts.IContextService;
 import org.eclipse.ui.part.EditorPart;
 import org.eclipse.ui.texteditor.FindReplaceAction;
 import org.eclipse.ui.texteditor.IAbstractTextEditorHelpContextIds;
@@ -33,6 +35,7 @@ public class LargeFileEditor extends EditorPart implements IFindReplaceTarget {
 	private File textFile;
 	private FileTextViewer viewer;
 	private IPropertyChangeListener fFontPropertyChangeListener= new FontPropertyChangeListener();
+	private IContextActivation context;
 
 	/**
 	 * Internal property change listener for handling workbench font changes.
@@ -105,6 +108,19 @@ public class LargeFileEditor extends EditorPart implements IFindReplaceTarget {
 		JFaceResources.getFontRegistry().addListener(fFontPropertyChangeListener);
 		
 		createActions();
+		activateGrepTargetContext();
+	}
+
+	private void activateGrepTargetContext() {
+		IContextService contextService = (IContextService) getSite().getService(IContextService.class);
+		context = contextService.activateContext("org.eclipse.ui.textEditorScope");
+	}
+
+	private void deactivateGrepTargetContext() {
+		if (context == null)
+			return;
+		IContextService contextService = (IContextService) getSite().getService(IContextService.class);
+		contextService.deactivateContext(context);
 	}
 
 	private void createActions() {
@@ -152,6 +168,7 @@ public class LargeFileEditor extends EditorPart implements IFindReplaceTarget {
 	public void dispose() {
 		super.dispose();
 		JFaceResources.getFontRegistry().removeListener(fFontPropertyChangeListener);
+		deactivateGrepTargetContext();
 	}
 
 	@Override
