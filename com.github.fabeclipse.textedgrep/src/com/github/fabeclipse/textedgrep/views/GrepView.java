@@ -67,10 +67,11 @@ import com.github.fabeclipse.textedgrep.IGrepTarget;
 public class GrepView extends ViewPart implements IAdaptable {
 	public static final String VIEW_ID = "com.github.fabeclipse.textedgrep.grepview";
 
-	private static final String GREPREGEX = "grepregex";
+	private static final String KEY_GREPREGEX = "grepregex";
 	private static final String KEY_CASESENSITIVE = "casesensitive";
 	private static final String KEY_HIGHLIGHTMULTIPLE = "highlightmultiple";
 	private static final String KEY_REGEX_HISTORY = "regexhistory";
+	private static final String KEY_DEFAULT_COLOR = "regexcolour";
 
 	/**
 	 * @since 1.2
@@ -137,6 +138,8 @@ public class GrepView extends ViewPart implements IAdaptable {
 
 	private IGrepTarget target;
 
+	private Integer regexColor;
+
 	@Override
 	public void createPartControl(final Composite parent) {
 		GridLayout layout = new GridLayout(1, false);
@@ -164,7 +167,7 @@ public class GrepView extends ViewPart implements IAdaptable {
 		};
 
 		
-		regexEntry = new RegexEntry(parent, listener);
+		regexEntry = new RegexEntry(parent, listener, regexColor);
 		regexEntry.setLayoutData(new GridData(SWT.FILL, SWT.BEGINNING, true, false));
 		regexEntry.setRegexpText(lastRegex);
 		setRegexHistoryInComboBox();
@@ -521,7 +524,7 @@ public class GrepView extends ViewPart implements IAdaptable {
 	@Override
 	public void saveState(IMemento memento) {
 		super.saveState(memento);
-		memento.putString(GREPREGEX, lastRegex);
+		memento.putString(KEY_GREPREGEX, lastRegex);
 		memento.putBoolean(KEY_CASESENSITIVE, csAction.isChecked() );
 		memento.putBoolean(KEY_HIGHLIGHTMULTIPLE, hmAction.isChecked() );
 		String history = "";
@@ -529,6 +532,9 @@ public class GrepView extends ViewPart implements IAdaptable {
 			history += helement + "\n";
 		}
 		memento.putString(KEY_REGEX_HISTORY, history);
+		Color color = regexEntry.getRegexColor();
+		regexColor = color.getRed() << 16 | color.getGreen() | color.getBlue();
+		memento.putInteger(KEY_DEFAULT_COLOR, regexColor);
 	}
 
 	@Override
@@ -536,7 +542,7 @@ public class GrepView extends ViewPart implements IAdaptable {
 		super.init(site, memento);
 		// check if there is a value saved in the memento
 		if (memento != null) {
-			lastRegex = memento.getString(GREPREGEX);
+			lastRegex = memento.getString(KEY_GREPREGEX);
 			Boolean cs = memento.getBoolean(KEY_CASESENSITIVE);
 			initialCaseSensitivity = cs == null ? false : cs;
 			Boolean hm = memento.getBoolean(KEY_HIGHLIGHTMULTIPLE);
@@ -549,12 +555,16 @@ public class GrepView extends ViewPart implements IAdaptable {
 						regexHistory.add(helem);
 				}
 			}
+			regexColor = memento.getInteger(KEY_DEFAULT_COLOR);
 		}
 
 		// to make things simpler do not allow a null
 		// regular expression
 		if (lastRegex == null)
 			lastRegex = "";
+		if (regexColor == null) {
+			regexColor = 0x00FFFF00; // default colour is yellow
+		}
 	}
 
 	@Override

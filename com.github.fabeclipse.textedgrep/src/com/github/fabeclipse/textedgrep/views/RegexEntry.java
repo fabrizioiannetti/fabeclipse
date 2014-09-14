@@ -6,6 +6,8 @@ import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.graphics.Color;
+import org.eclipse.swt.graphics.GC;
+import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.RGB;
 import org.eclipse.swt.widgets.Button;
@@ -38,20 +40,31 @@ public class RegexEntry extends Composite {
 	 * 
 	 * @param parent the parent container
 	 * @param listener an object to receive events.
+	 * @param color the color to use for regular expression (XRGB 32 bit format)
 	 */
-	public RegexEntry(Composite parent, IRegexEntryListener listener) {
+	public RegexEntry(Composite parent, IRegexEntryListener listener, int color) {
 		super(parent, SWT.NONE);
 		this.listener = listener;
+		regexColor = new Color(getDisplay(), (color >> 16) & 0x0FF, (color >> 8) & 0x0FF, color  & 0x0FF);
 		GridLayoutFactory.fillDefaults().numColumns(2).applyTo(this);
 		regexpText = new Combo(this, SWT.SINGLE);
 		chooseColor = new Button(this, SWT.PUSH);
-		chooseColor.setText(" ");
-		chooseColor.setBackground(regexColor);
+		updateColorChooser();
 		GridDataFactory.fillDefaults().grab(true, false).applyTo(regexpText);
 		GridDataFactory.fillDefaults().applyTo(chooseColor);
 		setupColorChooser();
 		setupRegexCombo();
 		setTabList(new Control[] { regexpText });
+	}
+
+	private void updateColorChooser() {
+		Image newImage = new Image(getDisplay(), 16, 16);
+		GC gc = new GC(newImage);
+		gc.setBackground(regexColor);
+		gc.fillRectangle(0, 0, 16, 16);
+		gc.drawRectangle(0, 0, 15, 15);
+		gc.dispose();
+		chooseColor.setImage(newImage);
 	}
 
 	@Override
@@ -81,25 +94,29 @@ public class RegexEntry extends Composite {
 
 			@Override
 			public void widgetSelected(SelectionEvent e) {
-				widgetDefaultSelected(e);
-			}
-			
-			@Override
-			public void widgetDefaultSelected(SelectionEvent e) {
 				ColorDialog colorDialog = new ColorDialog(getShell());
 				RGB rgb = colorDialog.open();
 				if (rgb != null) {
 					Color oldColor = regexColor;
 					regexColor = new Color(getDisplay(), rgb);
-					chooseColor.setBackground(regexColor);
+					updateColorChooser();
 					oldColor.dispose();
 				}
+			}
+			
+			@Override
+			public void widgetDefaultSelected(SelectionEvent e) {
 			}
 		});
 	}
 
 	public Color getRegexColor() {
 		return regexColor;
+	}
+	
+	public void setRegexColor(Color regexColor) {
+		regexColor.dispose();
+		this.regexColor = regexColor;
 	}
 	
 	public String getRegexpText() {
@@ -119,4 +136,5 @@ public class RegexEntry extends Composite {
 	public void setRegexHistory(String[] history) {
 		regexpText.setItems(history);
 	}
+
 }
