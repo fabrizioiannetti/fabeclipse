@@ -533,7 +533,7 @@ public class GrepView extends ViewPart implements IAdaptable {
 		}
 		memento.putString(KEY_REGEX_HISTORY, history);
 		Color color = regexEntry.getRegexColor();
-		regexColor = color.getRed() << 16 | color.getGreen() | color.getBlue();
+		regexColor = color.getRed() << 16 | color.getGreen() << 8 | color.getBlue();
 		memento.putInteger(KEY_DEFAULT_COLOR, regexColor);
 	}
 
