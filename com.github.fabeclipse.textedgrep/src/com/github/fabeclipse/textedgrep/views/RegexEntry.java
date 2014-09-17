@@ -95,6 +95,8 @@ public class RegexEntry extends Composite {
 			@Override
 			public void widgetSelected(SelectionEvent e) {
 				ColorDialog colorDialog = new ColorDialog(getShell());
+				colorDialog.setText("Highlight color");
+				colorDialog.setRGB(regexColor.getRGB());
 				RGB rgb = colorDialog.open();
 				if (rgb != null) {
 					Color oldColor = regexColor;
@@ -108,6 +110,7 @@ public class RegexEntry extends Composite {
 			public void widgetDefaultSelected(SelectionEvent e) {
 			}
 		});
+		chooseColor.setToolTipText("Choose highlight color");
 	}
 
 	public Color getRegexColor() {
