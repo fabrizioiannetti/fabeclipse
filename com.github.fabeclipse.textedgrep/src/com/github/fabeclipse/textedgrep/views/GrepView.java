@@ -180,10 +180,11 @@ public class GrepView extends ViewPart implements IAdaptable {
 				// see SourceViewer, monkey see monkey do :)
 				if (grepContext != null) {
 					int digits= 2;
-					double lines = grepContext.getMaxOriginalLine();
+					double lines = grepContext.getMaxOriginalLine() + 1;
 					while (lines  > Math.pow(10, digits) -1) {
 						++digits;
 					}
+					System.out.println("Number of digits:" + digits + "for lines " + lines);
 					return digits;
 				}
 				return super.computeNumberOfDigits();
