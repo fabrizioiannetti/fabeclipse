@@ -24,3 +24,5 @@ Key bindings:
 inside the search box:
 * ESC closes the find bar, arrow down searches forwards, arrow up backwards
 * search is always case insensitive and incremental (find as you type)
+
+Marketplace site: http://marketplace.eclipse.org/content/texteditor-grep
