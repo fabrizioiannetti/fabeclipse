@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<plugin>
+
+   <extension
+         point="org.eclipse.ui.views">
+      <category
+            name="Viewer"
+            id="fab.image.viewer">
+      </category>
+      <view
+            name="Image"
+            icon="icons/sample.gif"
+            category="fab.image.viewer"
+            class="fab.image.viewer.views.ImageView"
+            id="fab.image.viewer.views.ImageView">
+      </view>
+   </extension>
+   <extension
+         point="org.eclipse.ui.editors">
+      <editor
+            class="fab.image.viewer.editors.ImageEditor"
+            default="false"
+            extensions="rgb, raw"
+            icon="icons/sample.gif"
+            id="fab.image.viewer.imageeditor"
+            name="Image">
+      </editor>
+   </extension>
+
+</plugin>
