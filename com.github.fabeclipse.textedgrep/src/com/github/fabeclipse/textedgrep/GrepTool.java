@@ -90,8 +90,11 @@ public class GrepTool {
 		private final int[] matchEnd;
 		private final int[] matchMap;
 		private int numberOfMatches;
+		private final int[] colorMap;
+		private final int colorNum;
+		
 
-		public GrepContext(IGrepTarget target, StringBuilder grep, int[] lineMap, int[] matchBegin, int[] matchEnd, int[] matchMap, int numGrepLines) {
+		public GrepContext(IGrepTarget target, StringBuilder grep, int[] lineMap, int[] matchBegin, int[] matchEnd, int[] matchMap, int[] colorMap, int numGrepLines) {
 			this.target = target;
 			this.grep = grep.toString();
 			this.lineMap = lineMap;
@@ -99,6 +102,13 @@ public class GrepTool {
 			this.matchEnd = matchEnd;
 			this.matchMap = matchMap;
 			this.numGrepLines = numGrepLines;
+			this.colorMap = colorMap;
+			int cn = 1;
+			for (int i = 0 ; i < colorMap.length; i++) {
+				if (colorMap[i] > cn)
+					cn = colorMap[i];
+			}
+			colorNum = cn;
 		}
 		
 		public int getOriginalLine(int grepLine) {
@@ -117,6 +127,10 @@ public class GrepTool {
 		
 		public int getMatchEndForGrepLine(int grepLine, int index) {
 			return matchEnd[matchMap[grepLine] + index];
+		}
+		
+		public int getColorForGrepLine(int grepLine) {
+			return colorMap[grepLine];
 		}
 		
 		public int getNumberOfMatches() {
@@ -158,7 +172,7 @@ public class GrepTool {
 		
 	}
 
-	private String regex;
+	private String[] regexList;
 	private final boolean caseSensitive;
 
 //	private static IDocumentListener listener = new IDocumentListener() {
@@ -174,21 +188,30 @@ public class GrepTool {
 //	};
 	
 	public GrepTool(String regex, boolean caseSensitive) {
+		this(new String[] {regex }, caseSensitive);
+	}
+
+	public GrepTool(String[] regexList, boolean caseSensitive) {
 		super();
-		this.regex = regex;
+		this.regexList = regexList;
 		this.caseSensitive = caseSensitive;
 	}
 
 	public GrepContext grep(IGrepTarget target, boolean multiple) {
 		GrepContext grepContext = null;
 		// start with 10 thousands lines (in the grep result)
-		int[] lineMap = new int[INITIAL_LINE_BUFFER_COUNT];
+		int[] lineMap  = new int[INITIAL_LINE_BUFFER_COUNT];
 		int[] matchMap = new int[lineMap.length];
+		int[] colorMap = new int[lineMap.length];
 		int[] matchBegin = new int[INITIAL_LINE_BUFFER_COUNT];
-		int[] matchEnd = new int[matchBegin.length];
+		int[] matchEnd   = new int[matchBegin.length];
 		StringBuilder grep = new StringBuilder();
 
-		Matcher matcher = Pattern.compile(regex, caseSensitive ? 0 : Pattern.CASE_INSENSITIVE).matcher("");
+//		Matcher matcher = Pattern.compile(regex, caseSensitive ? 0 : Pattern.CASE_INSENSITIVE).matcher("");
+		final Matcher[] matchers = new Matcher[regexList.length];
+		int matchCount = 0;
+		for (String rx : regexList)
+			matchers[matchCount++] = Pattern.compile(rx, caseSensitive ? 0 : Pattern.CASE_INSENSITIVE).matcher("");
 		Formatter formatter = new Formatter(grep);
 		int lineNum = 0;
 		int grepLineNum = 0;
@@ -196,43 +219,53 @@ public class GrepTool {
 		target.start();
 		while(target.hasNextLine()) {
 			String line = target.nextLine();
-			matcher.reset(line);
 			boolean found = false;
-			// look for matches on this line
-			while (matcher.find()) {
-				if (!found) {
-					// update grep line array/count only at first match
-					found = true;
-					if (grepLineNum >= lineMap.length) {
-						// resize lineMap adding 10 thousand elements
-						int[] newLineMap = new int[lineMap.length + INCREMENT_LINE_BUFFER_COUNT];
-						int oldLength = lineMap.length;
-						System.arraycopy(lineMap, 0, newLineMap, 0, oldLength);
-						lineMap = newLineMap;
-						// resize matchMap adding 10 thousand elements
-						int[] newMatchMap = new int[lineMap.length];
-						System.arraycopy(matchMap, 0, newMatchMap, 0, oldLength);
-						matchMap = newMatchMap;
+			// run each matcher on the line, the first one wins, i.e.
+			// one line can't be matched by more than one matcher
+			for (int m = 0 ; m < matchCount && !found; m++) {
+				final Matcher matcher = matchers[m];
+				matcher.reset(line);
+				// look for matches on this line
+				while (matcher.find()) {
+					if (!found) {
+						// update grep line array/count only at first match
+						found = true;
+						if (grepLineNum >= lineMap.length) {
+							// resize lineMap adding 10 thousand elements
+							int[] newLineMap = new int[lineMap.length + INCREMENT_LINE_BUFFER_COUNT];
+							int oldLength = lineMap.length;
+							System.arraycopy(lineMap, 0, newLineMap, 0, oldLength);
+							lineMap = newLineMap;
+							// resize matchMap adding 10 thousand elements
+							int[] newMatchMap = new int[lineMap.length];
+							System.arraycopy(matchMap, 0, newMatchMap, 0, oldLength);
+							matchMap = newMatchMap;
+							// resize colorMap adding 10 thousand elements
+							int[] newColorMap = new int[lineMap.length];
+							System.arraycopy(colorMap, 0, newColorMap, 0, oldLength);
+							colorMap = newColorMap;
+						}
+						matchMap[grepLineNum] = matchNum;
+						colorMap[grepLineNum] = m;
+						lineMap[grepLineNum++] = lineNum;
+						// add line to the grep text (only once!)
+						formatter.format("%s\n", line);
 					}
-					matchMap[grepLineNum] = matchNum;
-					lineMap[grepLineNum++] = lineNum;
-					// add line to the grep text (only once!)
-					formatter.format("%s\n", line);
+					if (matchNum >= matchBegin.length) {
+						// resize match boundaries accordingly
+						int oldLength = matchBegin.length;
+						int[] newMatchBegin = new int[oldLength + INCREMENT_LINE_BUFFER_COUNT];
+						System.arraycopy(matchBegin, 0, newMatchBegin, 0, oldLength);
+						matchBegin = newMatchBegin;
+						int[] newMatchEnd = new int[newMatchBegin.length];
+						System.arraycopy(matchEnd, 0, newMatchEnd, 0, oldLength);
+						matchEnd = newMatchEnd;
+					}
+					matchBegin[matchNum] = matcher.start();
+					matchEnd[matchNum++] = matcher.end();
+					// exit while loop if multiple matches on the same line are not required
+					if (!multiple) break;
 				}
-				if (matchNum >= matchBegin.length) {
-					// resize match boundaries accordingly
-					int oldLength = matchBegin.length;
-					int[] newMatchBegin = new int[oldLength + INCREMENT_LINE_BUFFER_COUNT];
-					System.arraycopy(matchBegin, 0, newMatchBegin, 0, oldLength);
-					matchBegin = newMatchBegin;
-					int[] newMatchEnd = new int[newMatchBegin.length];
-					System.arraycopy(matchEnd, 0, newMatchEnd, 0, oldLength);
-					matchEnd = newMatchEnd;
-				}
-				matchBegin[matchNum] = matcher.start();
-				matchEnd[matchNum++] = matcher.end();
-				// exit while loop if multiple matches on the same line are not required
-				if (!multiple) break;
 			}
 			lineNum++;
 		}
@@ -240,7 +273,7 @@ public class GrepTool {
 		// remove trailing newline
 		if (grep.length() > 0)
 			grep.deleteCharAt(grep.length()-1);
-		grepContext = new GrepContext(target, grep, lineMap, matchBegin, matchEnd, matchMap, grepLineNum);
+		grepContext = new GrepContext(target, grep, lineMap, matchBegin, matchEnd, matchMap, colorMap, grepLineNum);
 		grepContext.numberOfMatches = matchNum;
 		target.stop();
 		return grepContext;
