@@ -1,7 +1,11 @@
 package com.github.fabeclipse.textedgrep.views;
 
+import org.eclipse.jface.fieldassist.ComboContentAdapter;
+import org.eclipse.jface.fieldassist.FieldDecoration;
+import org.eclipse.jface.fieldassist.FieldDecorationRegistry;
 import org.eclipse.jface.layout.GridDataFactory;
 import org.eclipse.jface.layout.GridLayoutFactory;
+import org.eclipse.jface.text.FindReplaceDocumentAdapterContentProposalProvider;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
@@ -14,6 +18,8 @@ import org.eclipse.swt.widgets.ColorDialog;
 import org.eclipse.swt.widgets.Combo;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
+import org.eclipse.ui.IWorkbenchCommandConstants;
+import org.eclipse.ui.fieldassist.ContentAssistCommandAdapter;
 
 /**
  * Entry line for a grep regular expression.
@@ -34,6 +40,7 @@ public class RegexEntry extends Composite {
 	private Color regexColor;
 	private IRegexEntryListener listener;
 	private boolean showColorChooser = false;
+	private ContentAssistCommandAdapter regexpContentAssist;
 	
 	// default colour for foreground of the line
 	private static final RGB DEFAULT_REGEX_COLOR = new RGB(0, 0, 0);
@@ -90,7 +97,12 @@ public class RegexEntry extends Composite {
 	}
 
 	private void setupRegexCombo() {
-		GridDataFactory.fillDefaults().grab(true, false).applyTo(regexpText);
+		// compute space for content assist decoration
+		// (code from platform's FindAndReplaceDialog)
+		FieldDecoration dec= FieldDecorationRegistry.getDefault().getFieldDecoration(FieldDecorationRegistry.DEC_CONTENT_PROPOSAL);
+		int hIndent = dec.getImage().getBounds().width;
+
+		GridDataFactory.fillDefaults().grab(true, false).indent(hIndent, 0).applyTo(regexpText);
 		regexpText.addSelectionListener(new SelectionListener() {
 			@Override
 			public void widgetSelected(SelectionEvent e) {
@@ -104,6 +116,17 @@ public class RegexEntry extends Composite {
 				listener.grep(getRegexpText(), RegexEntry.this);
 			}
 		});
+		
+		// add content assist (code from platform's FindAndReplaceDialog)
+		ComboContentAdapter contentAdapter= new ComboContentAdapter();
+		FindReplaceDocumentAdapterContentProposalProvider findProposer= new FindReplaceDocumentAdapterContentProposalProvider(true);
+		regexpContentAssist = new ContentAssistCommandAdapter(
+				regexpText,
+				contentAdapter,
+				findProposer,
+				IWorkbenchCommandConstants.EDIT_CONTENT_ASSIST,
+				new char[0],
+				true);
 	}
 
 	private void setupColorChooser() {
