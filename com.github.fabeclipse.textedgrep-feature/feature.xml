@@ -2,19 +2,24 @@
 <feature
       id="com.github.fabeclipse.textedgrep_feature"
       label="Text Editor Grep"
-      version="2.0.0.qualifier"
+      version="2.1.0.qualifier"
       provider-name="Fabrizio Iannetti">
 
    <description url="https://github.com/fabrizioiannetti/fabeclipse">
       Add a Grep View that filters the current text editor content
    </description>
 
-   <copyright>
+   <copyright url="http://fabrizioiannetti.github.io/fabeclipse/">
       Copyright Fabrizio Iannetti.
    </copyright>
 
-   <license>
-      No license, use or modify as you like.
+   <license url="http://www.eclipse.org/legal/epl-v10.html">
+      This program and the accompanying materials
+are made available under the terms of the Eclipse Public License
+v1.0
+which accompanies this distribution, and is available at
+
+http://www.eclipse.org/org/documents/epl-v10.html
    </license>
 
    <plugin
