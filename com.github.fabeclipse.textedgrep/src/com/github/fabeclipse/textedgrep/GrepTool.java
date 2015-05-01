@@ -91,7 +91,6 @@ public class GrepTool {
 		private final int[] matchMap;
 		private int numberOfMatches;
 		private final int[] colorMap;
-		private final int colorNum;
 		
 
 		public GrepContext(IGrepTarget target, StringBuilder grep, int[] lineMap, int[] matchBegin, int[] matchEnd, int[] matchMap, int[] colorMap, int numGrepLines) {
@@ -103,12 +102,6 @@ public class GrepTool {
 			this.matchMap = matchMap;
 			this.numGrepLines = numGrepLines;
 			this.colorMap = colorMap;
-			int cn = 1;
-			for (int i = 0 ; i < colorMap.length; i++) {
-				if (colorMap[i] > cn)
-					cn = colorMap[i];
-			}
-			colorNum = cn;
 		}
 		
 		public int getOriginalLine(int grepLine) {

@@ -6,12 +6,15 @@ import java.util.List;
 import org.eclipse.core.runtime.IAdaptable;
 import org.eclipse.jface.action.Action;
 import org.eclipse.jface.action.IMenuManager;
+import org.eclipse.jface.action.IToolBarManager;
 import org.eclipse.jface.dialogs.InputDialog;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.resource.JFaceResources;
+import org.eclipse.jface.text.AbstractDocument;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.CursorLinePainter;
 import org.eclipse.jface.text.Document;
+import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.IFindReplaceTarget;
 import org.eclipse.jface.text.IFindReplaceTargetExtension;
 import org.eclipse.jface.text.IFindReplaceTargetExtension3;
@@ -22,6 +25,8 @@ import org.eclipse.jface.text.source.SourceViewer;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.CaretEvent;
 import org.eclipse.swt.custom.CaretListener;
+import org.eclipse.swt.custom.LineBackgroundEvent;
+import org.eclipse.swt.custom.LineBackgroundListener;
 import org.eclipse.swt.custom.StyleRange;
 import org.eclipse.swt.events.KeyEvent;
 import org.eclipse.swt.events.KeyListener;
@@ -33,9 +38,11 @@ import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.RGB;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
+import org.eclipse.swt.widgets.ColorDialog;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Text;
 import org.eclipse.swt.widgets.ToolBar;
 import org.eclipse.swt.widgets.ToolItem;
@@ -85,7 +92,7 @@ public class GrepView extends ViewPart implements IAdaptable {
 	private String lastRegex;
 	private GrepTool grepTool;
 	private GrepContext grepContext;
-//	private IEditorPart textEd;
+	private Color cursorLineColor;
 	private Color highlightColor;
 	private boolean initialCaseSensitivity;
 
@@ -133,12 +140,11 @@ public class GrepView extends ViewPart implements IAdaptable {
 	private Composite findbar;
 	private List<String> regexHistory = new ArrayList<String>();
 
-	// regex text entry, should become an extendible list
-	private RegexEntry regexEntry;
+	// list of regex text entries
+	private List<RegexEntry> regexEntries = new ArrayList<RegexEntry>();
 
 	private IGrepTarget target;
 
-	private Integer regexColor;
 
 	@Override
 	public void createPartControl(final Composite parent) {
@@ -147,30 +153,7 @@ public class GrepView extends ViewPart implements IAdaptable {
 		layout.marginHeight = 0;
 		layout.marginWidth = 0;
 
-		// when pressing ENTER in the regexp field do a grep
-		IRegexEntryListener listener = new IRegexEntryListener() {
-			@Override
-			public void grep(String text) {
-				// the user pressed ENTER
-				doGrep();
-				viewer.getControl().setFocus();
-				// add regex to history if:
-				// * not empty
-				// * history is empty, or last element of history is not the same
-				if (!text.isEmpty() && (regexHistory.isEmpty() || !regexHistory.get(regexHistory.size() - 1).equals(text))) {
-					while (regexHistory.size() >= REGEX_HISTORY_MAX_SIZE)
-						regexHistory.remove(0);
-					regexHistory.add(text);
-					setRegexHistoryInComboBox();
-				}
-			}
-		};
-
-		
-		regexEntry = new RegexEntry(parent, listener, regexColor);
-		regexEntry.setLayoutData(new GridData(SWT.FILL, SWT.BEGINNING, true, false));
-		regexEntry.setRegexpText(lastRegex);
-		setRegexHistoryInComboBox();
+		addRegexField(parent);
 
 		// vertical ruler that shows the original's line number
 		CompositeRuler ruler = new CompositeRuler();
@@ -205,10 +188,29 @@ public class GrepView extends ViewPart implements IAdaptable {
 		viewer.setEditable(false);
 		// highlight the cursor line
 		CursorLinePainter cursorLinePainter = new CursorLinePainter(viewer);
-		highlightColor = new Color(parent.getDisplay(), new RGB(200, 200, 0));
-		cursorLinePainter.setHighlightColor(highlightColor);
+		cursorLineColor = new Color(parent.getDisplay(), new RGB(200, 200, 0));
+		cursorLinePainter.setHighlightColor(cursorLineColor);
 		viewer.addPainter(cursorLinePainter);
 
+		viewer.getTextWidget().addLineBackgroundListener(new LineBackgroundListener() {
+			@Override
+			public void lineGetBackground(LineBackgroundEvent event) {
+				GrepContext gc = grepContext;
+				IDocument document = viewer.getDocument();
+				if (gc != null) {
+					int line;
+					try {
+						line = document.getLineOfOffset(event.lineOffset);
+						int index = gc.getColorForGrepLine(line);
+						RegexEntry entry = regexEntries.get(index);
+						event.lineBackground = entry.getRegexColor();
+					} catch (BadLocationException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				}
+			}
+		});
 		viewer.setDocument(new Document("grep result"));
 
 		// track cursor line and synchronise the cursor position in the editor
@@ -244,6 +246,25 @@ public class GrepView extends ViewPart implements IAdaptable {
 		hmAction = new Action("Highlight Multiple", Action.AS_CHECK_BOX) {};
 		hmAction.setChecked(initialHighlightMultiple);
 		menuManager.add(hmAction);
+
+		Action colorAction = new Action("Highlight color") {
+			@Override
+			public void run() {
+				Shell shell = getSite().getShell();
+				ColorDialog colorDialog = new ColorDialog(shell);
+				colorDialog.setText("Highlight color");
+				colorDialog.setRGB(highlightColor.getRGB());
+				RGB rgb = colorDialog.open();
+				if (rgb != null) {
+					Color oldColor = highlightColor;
+					highlightColor = new Color(shell.getDisplay(), rgb);
+					// TODO: move this in a long-running job, possible?
+					updateHighlightRanges();
+					oldColor.dispose();
+				}
+			}
+		};
+		menuManager.add(colorAction);
 
 		menuManager.add(new Action("Edit History") {
 			@Override
@@ -281,16 +302,13 @@ public class GrepView extends ViewPart implements IAdaptable {
 						if (!helem.isEmpty())
 							regexHistory.add(helem);
 					}
-					setRegexHistoryInComboBox();
+					for (RegexEntry rxe : regexEntries)
+						setRegexHistoryInComboBox(rxe);
 				}
 			}
 		});
 
-		linkToEditorAction = new Action("Link To Editor",Action.AS_CHECK_BOX) {};
-		ImageDescriptor image = Activator.imageDescriptorFromPlugin(Activator.PLUGIN_ID, "icons/synced.gif");
-		linkToEditorAction.setImageDescriptor(image);
-		linkToEditorAction.setToolTipText("Sync Grep Content to active editor\nAs soon as an editor is activated its content is filtered");
-		getViewSite().getActionBars().getToolBarManager().add(linkToEditorAction);
+		fillActionBar();
 
 // this code would use the standard find dialog, maybe offer it as an option?
 //		getViewSite().getActionBars().setGlobalActionHandler(ActionFactory.FIND.getId(), new FindReplaceAction(new ResourceBundle() {
@@ -309,11 +327,77 @@ public class GrepView extends ViewPart implements IAdaptable {
 		IPartService partService = (IPartService) getViewSite().getService(IPartService.class);
 		partService.addPartListener(partListener);
 
-		// make tab key to toggle between the regular expression text and the viewer
-		parent.setTabList(new Control[] {regexEntry, viewer.getControl(), regexEntry});
+		// make tab key toggle between the regular expression text(s) and the viewer
+		makeTabList();
 	}
 
-	private void setRegexHistoryInComboBox() {
+	private void addRegexField(final Composite parent) {
+		// when pressing ENTER in the regexp field do a grep
+		IRegexEntryListener listener = new IRegexEntryListener() {
+			@Override
+			public void grep(String text, RegexEntry rxe) {
+				// the user pressed ENTER
+				doGrep();
+				viewer.getControl().setFocus();
+				// add regex to history if:
+				// * not empty
+				// * history is empty, or last element of history is not the same
+				if (!text.isEmpty() && (regexHistory.isEmpty() || !regexHistory.get(regexHistory.size() - 1).equals(text))) {
+					while (regexHistory.size() >= REGEX_HISTORY_MAX_SIZE)
+						regexHistory.remove(0);
+					regexHistory.add(text);
+					setRegexHistoryInComboBox(rxe);
+				}
+			}
+		};
+
+		RegexEntry rxe = new RegexEntry(parent, listener, -1);
+		rxe.setLayoutData(new GridData(SWT.FILL, SWT.BEGINNING, true, false));
+		rxe.setRegexpText(lastRegex);
+		setRegexHistoryInComboBox(rxe);
+		regexEntries.add(rxe);
+		// make sure the widget is just above the viewer
+		if (viewer != null && !viewer.getControl().isDisposed()) {
+			rxe.moveAbove(viewer.getControl());
+		}
+	}
+
+	private void fillActionBar() {
+		IToolBarManager toolBarManager = getViewSite().getActionBars().getToolBarManager();
+		linkToEditorAction = new Action("Link To Editor",Action.AS_CHECK_BOX) {};
+		ImageDescriptor image = Activator.imageDescriptorFromPlugin(Activator.PLUGIN_ID, "icons/synced.gif");
+		linkToEditorAction.setImageDescriptor(image);
+		linkToEditorAction.setToolTipText("Sync Grep Content to active editor\nAs soon as an editor is activated its content is filtered");
+		toolBarManager.add(linkToEditorAction);
+
+		// TODO: leave commented for now, activate when ready
+		// (remove not possible at the moment)
+//		Action addRegexAction = new Action("+") {
+//			@Override
+//			public void run() {
+//				Composite parent = viewer.getControl().getParent();
+//				addRegexField(parent);
+//				makeTabList();
+//				parent.layout();
+//			}
+//		};
+//		toolBarManager.add(addRegexAction);
+	}
+
+	private void makeTabList() {
+		final Composite parent = viewer.getControl().getParent();
+		Control[] tabList = new Control[regexEntries.size() + 2];
+		int i = 0;
+		for (RegexEntry regexEntry : regexEntries) {
+			tabList[i++] = regexEntry;
+		}
+		tabList[i++] = viewer.getControl();
+		
+		tabList[i] = tabList[0];
+		parent.setTabList(tabList);
+	}
+
+	private void setRegexHistoryInComboBox(RegexEntry regexEntry) {
 		String[] harray = new String[regexHistory.size()];
 		for (int i = 0; i < harray.length; i++)
 			harray[i] = regexHistory.get(harray.length - i - 1);
@@ -470,8 +554,13 @@ public class GrepView extends ViewPart implements IAdaptable {
 	 * The resulting text is shown in the text viewer.
 	 */
 	private void doGrep() {
-		lastRegex = regexEntry.getRegexpText();
-		grepTool = new GrepTool(lastRegex, csAction.isChecked());
+		String[] rxList = new String[regexEntries.size()];
+		for (int rxi = 0; rxi < rxList.length; rxi++) {
+			// TODO: array for last regex too...
+			lastRegex = regexEntries.get(rxi).getRegexpText();
+			rxList[rxi]   = lastRegex;
+		}
+		grepTool = new GrepTool(rxList, csAction.isChecked());
 		updateTarget();
 
 		if (target == null)
@@ -480,22 +569,59 @@ public class GrepView extends ViewPart implements IAdaptable {
 		grepContext = grepTool.grep(target, hmAction.isChecked());
 		Document document = new Document(grepContext.getText());
 		viewer.setDocument(document);
+		updateHighlightRanges();
+		viewer.getControl().setToolTipText("source: " + target.getTitle());
+	}
+
+	private int computeRangeCount() {
+		int j = 0;
+		AbstractDocument document = (AbstractDocument) viewer.getDocument();
 		int lines = document.getNumberOfLines();
 		try {
 			int totalMatches = grepContext.getNumberOfMatches();
+			// 1 range for each highlight (background), 1 range for each line (foreground)
+//			int[] ranges = new int[totalMatches*2 + lines*2];
+//			StyleRange[] styles = new StyleRange[totalMatches + lines];
+//			int[] ranges = new int[lines*2];
+//			StyleRange[] styles = new StyleRange[lines];
 			int[] ranges = new int[totalMatches*2];
 			StyleRange[] styles = new StyleRange[totalMatches];
 			// this same style range object is used for all matches
 			// to save some memory, the real ranges are
 			// in the integer arrays
-			StyleRange matchHighLightStyle = new StyleRange();
-			matchHighLightStyle.background = regexEntry.getRegexColor();
-			for (int i = 0, j = 0 ; i < lines ; i++) {
+//			StyleRange[] lineForegroundStyles = new StyleRange[regexEntries.size()];
+//			for (int i = 0; i < lineForegroundStyles.length; i++) {
+//				lineForegroundStyles[i] = new StyleRange();
+//				lineForegroundStyles[i].foreground = regexEntries.get(i).getRegexColor();
+//			}
+//			StyleRange[] matchHighLightStyles = new StyleRange[regexEntries.size()];
+//			for (int i = 0; i < matchHighLightStyles.length; i++) {
+//				matchHighLightStyles[i] = new StyleRange();
+//				matchHighLightStyles[i].foreground = regexEntries.get(i).getRegexColor();
+//				matchHighLightStyles[i].background = highlightColor;
+//			}
+			// this is the range used for all match highlights (background)
+			StyleRange highlightStyle = new StyleRange();
+			highlightStyle.background = highlightColor;
+			for (int i = 0 ; i < lines ; i++) {
+//				ranges[j*2]     = document.getLineOffset(i);
+//				ranges[j*2 + 1] = document.getLineLength(i);
+//				styles[j++]     = lineForegroundStyles[grepContext.getColorForGrepLine(i)];
 				int nm = grepContext.getNumberOfMatchesForGrepLine(i);
+				int lineOffset = document.getLineOffset(i);
+				int grepBegin = grepContext.getMatchBeginForGrepLine(i, 0);
+				if (grepBegin > 0) {
+					// there is a segment
+				}
+				int endOfLastMatch = 0;
 				for (int k = 0 ; k < nm ; k++) {
-					ranges[j*2]     = document.getLineOffset(i) + grepContext.getMatchBeginForGrepLine(i, k);
+					grepBegin = grepContext.getMatchBeginForGrepLine(i, k);
+					if (grepBegin > endOfLastMatch) {
+						// add the range for the text here
+					}
+					ranges[j*2]     = document.getLineOffset(i) + grepBegin;
 					ranges[j*2 + 1] = grepContext.getMatchEndForGrepLine(i, k) - grepContext.getMatchBeginForGrepLine(i, k);
-					styles[j++]     = matchHighLightStyle;
+					styles[j++]     = highlightStyle;
 				}
 			}
 			viewer.getTextWidget().setStyleRanges(ranges, styles);
@@ -503,7 +629,65 @@ public class GrepView extends ViewPart implements IAdaptable {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		viewer.getControl().setToolTipText("source: " + target.getTitle());
+		return j;
+	}
+	/**
+	 * Set the highlight colour for match regions in the text viewer.
+	 * 
+	 * Ranges are picked up from the current grepContext (if no context
+	 * is currently present, the method returns).
+	 * 
+	 */
+	private void updateHighlightRanges() {
+		// need a grep context here
+		if (grepContext == null)
+			return;
+		
+		int j = 0;
+		AbstractDocument document = (AbstractDocument) viewer.getDocument();
+		int lines = document.getNumberOfLines();
+		try {
+			int totalMatches = grepContext.getNumberOfMatches();
+			// 1 range for each highlight (background), 1 range for each line (foreground)
+//			int[] ranges = new int[totalMatches*2 + lines*2];
+//			StyleRange[] styles = new StyleRange[totalMatches + lines];
+//			int[] ranges = new int[lines*2];
+//			StyleRange[] styles = new StyleRange[lines];
+			int[] ranges = new int[totalMatches*2];
+			StyleRange[] styles = new StyleRange[totalMatches];
+			// this same style range object is used for all matches
+			// to save some memory, the real ranges are
+			// in the integer arrays
+//			StyleRange[] lineForegroundStyles = new StyleRange[regexEntries.size()];
+//			for (int i = 0; i < lineForegroundStyles.length; i++) {
+//				lineForegroundStyles[i] = new StyleRange();
+//				lineForegroundStyles[i].foreground = regexEntries.get(i).getRegexColor();
+//			}
+//			StyleRange[] matchHighLightStyles = new StyleRange[regexEntries.size()];
+//			for (int i = 0; i < matchHighLightStyles.length; i++) {
+//				matchHighLightStyles[i] = new StyleRange();
+//				matchHighLightStyles[i].foreground = regexEntries.get(i).getRegexColor();
+//				matchHighLightStyles[i].background = highlightColor;
+//			}
+			// this is the range used for all match highlights (background)
+			StyleRange highlightStyle = new StyleRange();
+			highlightStyle.background = highlightColor;
+			for (int i = 0 ; i < lines ; i++) {
+//				ranges[j*2]     = document.getLineOffset(i);
+//				ranges[j*2 + 1] = document.getLineLength(i);
+//				styles[j++]     = lineForegroundStyles[grepContext.getColorForGrepLine(i)];
+				int nm = grepContext.getNumberOfMatchesForGrepLine(i);
+				for (int k = 0 ; k < nm ; k++) {
+					ranges[j*2]     = document.getLineOffset(i) + grepContext.getMatchBeginForGrepLine(i, k);
+					ranges[j*2 + 1] = grepContext.getMatchEndForGrepLine(i, k) - grepContext.getMatchBeginForGrepLine(i, k);
+					styles[j++]     = highlightStyle;
+				}
+			}
+			viewer.getTextWidget().setStyleRanges(ranges, styles);
+		} catch (BadLocationException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 	private void updateTarget() {
@@ -519,7 +703,7 @@ public class GrepView extends ViewPart implements IAdaptable {
 
 	@Override
 	public void setFocus() {
-		regexEntry.setFocus();
+		regexEntries.get(0).setFocus();
 	}
 
 	@Override
@@ -533,14 +717,16 @@ public class GrepView extends ViewPart implements IAdaptable {
 			history += helement + "\n";
 		}
 		memento.putString(KEY_REGEX_HISTORY, history);
-		Color color = regexEntry.getRegexColor();
-		regexColor = color.getRed() << 16 | color.getGreen() << 8 | color.getBlue();
-		memento.putInteger(KEY_DEFAULT_COLOR, regexColor);
+		Color color = highlightColor;
+		int defaultColor = color.getRed() << 16 | color.getGreen() << 8 | color.getBlue();
+		memento.putInteger(KEY_DEFAULT_COLOR, defaultColor);
 	}
 
 	@Override
 	public void init(IViewSite site, IMemento memento) throws PartInitException {
 		super.init(site, memento);
+		// default colour is yellow
+		int highlightCol = 0x00FFFF00;
 		// check if there is a value saved in the memento
 		if (memento != null) {
 			lastRegex = memento.getString(KEY_GREPREGEX);
@@ -556,16 +742,20 @@ public class GrepView extends ViewPart implements IAdaptable {
 						regexHistory.add(helem);
 				}
 			}
-			regexColor = memento.getInteger(KEY_DEFAULT_COLOR);
+			Integer defaultColor = memento.getInteger(KEY_DEFAULT_COLOR);
+			if (defaultColor != null)
+				highlightCol = defaultColor;
 		}
+
+		highlightColor = new Color(site.getShell().getDisplay(),
+				(highlightCol >> 16) & 0x00FF,
+				(highlightCol >> 8) & 0x00FF,
+				(highlightCol) & 0x00FF);
 
 		// to make things simpler do not allow a null
 		// regular expression
 		if (lastRegex == null)
 			lastRegex = "";
-		if (regexColor == null) {
-			regexColor = 0x00FFFF00; // default colour is yellow
-		}
 	}
 
 	@Override
@@ -573,7 +763,14 @@ public class GrepView extends ViewPart implements IAdaptable {
 		if (highlightColor != null) {
 			highlightColor.dispose();
 			highlightColor = null;
+		}
+		if (failedSearchColor != null) {
 			failedSearchColor.dispose();
+			failedSearchColor = null;
+		}
+		if (cursorLineColor != null) {
+			cursorLineColor.dispose();
+			cursorLineColor = null;
 		}
 		super.dispose();
 	}
@@ -582,15 +779,13 @@ public class GrepView extends ViewPart implements IAdaptable {
 	@Override
 	public Object getAdapter(Class adapter) {
 		Object object = super.getAdapter(adapter);
-//		System.out.println(adapter + "->" + object);
 		if (object == null && adapter.equals(IFindReplaceTarget.class)) {
 			object = viewer.getFindReplaceTarget();
-//			System.out.println("     ->" + object);
 		}
 		return object;
 	}
 
 	public void setGrepRegularExpression(String text) {
-		regexEntry.setRegexpText(text, true);
+		regexEntries.get(0).setRegexpText(text, true);
 	}
 }
