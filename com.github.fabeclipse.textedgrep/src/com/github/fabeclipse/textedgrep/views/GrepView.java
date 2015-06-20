@@ -28,10 +28,13 @@ import org.eclipse.swt.custom.CaretListener;
 import org.eclipse.swt.custom.LineBackgroundEvent;
 import org.eclipse.swt.custom.LineBackgroundListener;
 import org.eclipse.swt.custom.StyleRange;
+import org.eclipse.swt.events.KeyAdapter;
 import org.eclipse.swt.events.KeyEvent;
 import org.eclipse.swt.events.KeyListener;
 import org.eclipse.swt.events.ModifyEvent;
 import org.eclipse.swt.events.ModifyListener;
+import org.eclipse.swt.events.MouseAdapter;
+import org.eclipse.swt.events.MouseEvent;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.graphics.Color;
@@ -145,6 +148,8 @@ public class GrepView extends ViewPart implements IAdaptable {
 
 	private IGrepTarget target;
 
+	private IEditorPart targetPart;
+
 
 	@Override
 	public void createPartControl(final Composite parent) {
@@ -228,6 +233,26 @@ public class GrepView extends ViewPart implements IAdaptable {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
 					}
+				}
+			}
+		});
+		
+		// register double click and enter key to activate the current target
+		viewer.getTextWidget().addMouseListener(new MouseAdapter() {
+			@Override
+			public void mouseDoubleClick(MouseEvent e) {
+				if (targetPart != null) {
+					IWorkbenchWindow window = getViewSite().getWorkbenchWindow();
+					window.getActivePage().activate(targetPart);
+				}
+			}
+		});
+		viewer.getTextWidget().addKeyListener(new KeyAdapter() {
+			@Override
+			public void keyReleased(KeyEvent e) {
+				if (targetPart != null) {
+					IWorkbenchWindow window = getViewSite().getWorkbenchWindow();
+					window.getActivePage().activate(targetPart);
 				}
 			}
 		});
@@ -697,8 +722,10 @@ public class GrepView extends ViewPart implements IAdaptable {
 		if (newTarget == null && activeEditor instanceof AbstractTextEditor) {
 			newTarget = new GrepTool.DocumentGrepTarget((AbstractTextEditor) activeEditor);
 		}
-		if (newTarget != null)
+		if (newTarget != null) {
 			target = newTarget;
+			targetPart = activeEditor;
+		}
 	}
 
 	@Override
