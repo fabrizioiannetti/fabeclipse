@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <site>
-   <feature url="features/com.github.fabeclipse.textedgrep_feature_2.0.0.qualifier.jar" id="com.github.fabeclipse.textedgrep_feature" version="2.0.0.qualifier">
+   <feature url="features/com.github.fabeclipse.textedgrep_feature_2.1.0.qualifier.jar" id="com.github.fabeclipse.textedgrep_feature" version="2.1.0.qualifier">
       <category name="com.github.fabeclipse.update"/>
    </feature>
    <feature url="features/com.github.fabrizioiannetti.largefileeditor_feature_1.0.0.qualifier.jar" id="com.github.fabrizioiannetti.largefileeditor_feature" version="1.0.0.qualifier">
