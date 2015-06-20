@@ -250,7 +250,7 @@ public class GrepView extends ViewPart implements IAdaptable {
 		viewer.getTextWidget().addKeyListener(new KeyAdapter() {
 			@Override
 			public void keyReleased(KeyEvent e) {
-				if (targetPart != null) {
+				if (e.keyCode == SWT.CR && targetPart != null) {
 					IWorkbenchWindow window = getViewSite().getWorkbenchWindow();
 					window.getActivePage().activate(targetPart);
 				}
@@ -543,7 +543,6 @@ public class GrepView extends ViewPart implements IAdaptable {
 			}
 		});
 		findText.addModifyListener(new ModifyListener() {
-
 			@Override
 			public void modifyText(ModifyEvent e) {
 				// text to find has changed, search again
