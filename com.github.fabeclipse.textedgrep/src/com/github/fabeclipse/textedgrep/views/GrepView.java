@@ -249,7 +249,7 @@ public class GrepView extends ViewPart implements IAdaptable {
 		});
 		viewer.getTextWidget().addKeyListener(new KeyAdapter() {
 			@Override
-			public void keyReleased(KeyEvent e) {
+			public void keyPressed(KeyEvent e) {
 				if (e.keyCode == SWT.CR && targetPart != null) {
 					IWorkbenchWindow window = getViewSite().getWorkbenchWindow();
 					window.getActivePage().activate(targetPart);
