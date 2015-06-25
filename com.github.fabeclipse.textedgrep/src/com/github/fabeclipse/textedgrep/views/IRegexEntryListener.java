@@ -1,3 +1,6 @@
+/**
+ * Copyright 2015 Fabrizio Iannetti.
+ */
 package com.github.fabeclipse.textedgrep.views;
 
 /**

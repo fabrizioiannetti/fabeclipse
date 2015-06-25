@@ -1,3 +1,6 @@
+/**
+ * Copyright 2015 Fabrizio Iannetti.
+ */
 package com.github.fabeclipse.textedgrep;
 
 import java.util.Formatter;
@@ -7,11 +10,18 @@ import java.util.regex.Pattern;
 
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
+import org.eclipse.jface.text.IRegion;
 import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.IWorkbenchPart;
 import org.eclipse.ui.texteditor.AbstractTextEditor;
 
 /**
+ * Class that encapsulate a grep operation using a given regular
+ * expression.
+ * 
+ * Calling {@link #grep(IGrepTarget, boolean)} yelds a result with
+ * the filtered text and information on the source range for each line.
+ * 
  * @since 2.0
  */
 public class GrepTool {
@@ -19,10 +29,18 @@ public class GrepTool {
 	private static final int INCREMENT_LINE_BUFFER_COUNT = 10000;
 	private static final int INITIAL_LINE_BUFFER_COUNT = 10000;
 
+	/**
+	 * Grep Bridge between a grep target and an IDocument object.
+	 * Used to grep text editors.
+	 * 
+	 * @author iannetti
+	 *
+	 */
 	public static class DocumentGrepTarget implements IGrepTarget {
 
 		private final IDocument document;
-		private Scanner scanner;
+//		private Scanner scanner;
+		int lineIndex = -1;
 		private AbstractTextEditor editor;
 		
 		public DocumentGrepTarget(AbstractTextEditor textEd) {
@@ -38,21 +56,31 @@ public class GrepTool {
 		@Override
 		public void start() {
 			String string = document.get();
-			scanner = new Scanner(string);
+			lineIndex = 0;
+//			scanner = new Scanner(string);
 		}
 		@Override
 		public void stop() {
-			scanner.close();
-			scanner = null;
+			lineIndex = -1;
+//			scanner.close();
+//			scanner = null;
 		}
 		@Override
 		public boolean hasNextLine() {
-			return scanner.hasNextLine();
+			return lineIndex < document.getNumberOfLines();
+//			return scanner.hasNextLine();
 		}
 
 		@Override
 		public String nextLine() {
-			return scanner.nextLine();
+			try {
+				IRegion information = document.getLineInformation(lineIndex);
+				lineIndex++;
+				return document.get(information.getOffset(), information.getLength());
+			} catch (BadLocationException e) {
+				return null;
+			}
+//			return scanner.nextLine();
 		}
 		@Override
 		public int getLineOffset(int line) {
@@ -200,7 +228,6 @@ public class GrepTool {
 		int[] matchEnd   = new int[matchBegin.length];
 		StringBuilder grep = new StringBuilder();
 
-//		Matcher matcher = Pattern.compile(regex, caseSensitive ? 0 : Pattern.CASE_INSENSITIVE).matcher("");
 		final Matcher[] matchers = new Matcher[regexList.length];
 		int matchCount = 0;
 		for (String rx : regexList)

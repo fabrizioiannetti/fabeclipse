@@ -1,3 +1,6 @@
+/**
+ * Copyright 2015 Fabrizio Iannetti.
+ */
 package com.github.fabeclipse.textedgrep.views;
 
 import org.eclipse.jface.fieldassist.ComboContentAdapter;
@@ -29,7 +32,6 @@ import org.eclipse.ui.fieldassist.ContentAssistCommandAdapter;
  * <li> button to select the color to use for text highlight
  * </ul>
  * 
- * @author iannetti
  * @since 2.0
  *
  */
