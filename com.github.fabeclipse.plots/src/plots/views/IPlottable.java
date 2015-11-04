@@ -16,4 +16,12 @@ public interface IPlottable {
 	 */
 	void plot(GC gc, Rectangle dst);
 
+	int getCount();
+
+	Plot setDomainRange(int start, int end);
+
+	Plot setDomainRange(int[] range);
+
+	int[] getDomainExtension();
+
 }

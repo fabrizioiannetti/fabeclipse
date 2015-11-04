@@ -167,9 +167,9 @@ public class ImportDataFromTextDialog extends SelectionStatusDialog {
 	protected void buttonPressed(int buttonId) {
 		try {
 			if (buttonId == BUTTON_ID)
-				importData(100);
+				importData(100, true);
 			else if (buttonId == IDialogConstants.OK_ID)
-				importData(0);
+				importData(0, false);
 		} catch (BadLocationException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -177,7 +177,7 @@ public class ImportDataFromTextDialog extends SelectionStatusDialog {
 		super.buttonPressed(buttonId);
 	}
 
-	private void importData(int lines) throws BadLocationException {
+	private void importData(int lines, boolean show) throws BadLocationException {
 		String selected = source.getText();
 		IDocument document = getSelectedEditorDocument(selected);
 		if (document != null) {
@@ -193,7 +193,8 @@ public class ImportDataFromTextDialog extends SelectionStatusDialog {
 			else
 				text = document.get(); // TODO: this is BAD: it returns the whole editor content!
 			importer.importFromText(text, regex.getText());
-			viewer.setInput(importer);
+			if (show)
+				viewer.setInput(importer);
 		}
 	}
 
