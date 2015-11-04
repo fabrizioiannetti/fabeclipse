@@ -13,12 +13,16 @@ import java.nio.channels.FileChannel.MapMode;
 
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.jface.action.Action;
+import org.eclipse.jface.action.IAction;
+import org.eclipse.jface.action.IMenuCreator;
 import org.eclipse.jface.action.MenuManager;
 import org.eclipse.jface.action.Separator;
 import org.eclipse.jface.action.ToolBarManager;
 import org.eclipse.jface.layout.GridDataFactory;
 import org.eclipse.jface.layout.GridLayoutFactory;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.MouseEvent;
+import org.eclipse.swt.events.MouseListener;
 import org.eclipse.swt.events.PaintEvent;
 import org.eclipse.swt.events.PaintListener;
 import org.eclipse.swt.graphics.Image;
@@ -26,9 +30,11 @@ import org.eclipse.swt.graphics.ImageData;
 import org.eclipse.swt.graphics.PaletteData;
 import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Menu;
+import org.eclipse.swt.widgets.Text;
 import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.IEditorSite;
 import org.eclipse.ui.IURIEditorInput;
@@ -62,6 +68,9 @@ public class ImageEditor extends EditorPart implements PaintListener {
 	private Image image;
 	private Label description;
 	private int width = 320;
+	private int bytePerPixel = 4;
+	private boolean swap16 = false;
+	private Text hexDump;
 
 	public ImageEditor() {
 		// TODO Auto-generated constructor stub
@@ -105,16 +114,18 @@ public class ImageEditor extends EditorPart implements PaintListener {
 	private synchronized void createImage() {
 		Display device = getEditorSite().getWorkbenchWindow().getShell().getDisplay();
 
-		int bytePerPixel = 2;
+//		int[] knownSize = isWellKnownSize(size, bytePerPixel);
+//		if (knownSize != null) {
+//			width = knownSize[0];
+//			height = knownSize[1];
+//		}
+		if (width == 0)
+			width = 720;
 		int size = buffer.limit();
-		int height = size/ bytePerPixel / width;
-		int[] knownSize = isWellKnownSize(size, bytePerPixel);
-		if (knownSize != null) {
-			width = knownSize[0];
-			height = knownSize[1];
-		}
-		width = 1920;
-		height = 1088;
+		int height = size / bytePerPixel / width;
+		
+		// clamp size to used image data
+		
 
 		byte[] data;
 		data = new byte[buffer.limit()];
@@ -135,15 +146,19 @@ public class ImageEditor extends EditorPart implements PaintListener {
 	}
 
 	private Image create32bitImage(Display device, int size, int height, byte[] data) {
+		buffer.order(endianess);
+		ByteBuffer temp = ByteBuffer.wrap(data);
 		// correct for endianess if necessary
 //		if (!endianess.equals(ByteOrder.nativeOrder())) {
-			buffer.order(endianess);
-			ByteBuffer temp = ByteBuffer.wrap(data);
-			temp.order(ByteOrder.nativeOrder());
-			for (int i = 0; i < size; i+=4) {
-				temp.putInt(buffer.getInt());
-			}
+//			temp.order(ByteOrder.nativeOrder());
 //		}
+		for (int i = 0; i < size; i+=4) {
+			int v = buffer.getInt();
+			if (swap16)
+				v = (v >> 16) & (0x0000FFFF) | (v & (0x0000FFFF)) << 16 ;
+			temp.putInt(v);
+			
+		}
 		int redMask = 0x00FF << (adjustForAlpha(redShift, alphaShift));
 		int greenMask = 0x00FF << (adjustForAlpha(greenShift, alphaShift));
 		int blueMask = 0x00FF << (adjustForAlpha(blueShift, alphaShift));
@@ -246,27 +261,90 @@ public class ImageEditor extends EditorPart implements PaintListener {
 	}
 
 	private class SizeAction extends Action {
+		private int w;
 		public SizeAction(int width, int height) {
-			super(width + "x" + height);
+			super(Integer.toString(width));
+			w = width;
+		}
+		@Override
+		public void run() {
+			width = w;
+			createImage();
 		}
 	}
 	@Override
 	public void createPartControl(Composite parent) {
-		GridLayoutFactory.fillDefaults().applyTo(parent);
+		GridLayoutFactory.fillDefaults().numColumns(2).applyTo(parent);
 		description = new Label(parent, SWT.SINGLE);
-		GridDataFactory.fillDefaults().grab(true, false).applyTo(description);
+		GridDataFactory.fillDefaults().grab(true, false).span(2, 1).applyTo(description);
 
 		ToolBarManager toolBarManager = new ToolBarManager();
-		toolBarManager.createControl(parent);
-		toolBarManager.add(new Action("T") {
+		Action tAction = new Action("Size", IAction.AS_DROP_DOWN_MENU) {
+		};
+		tAction.setMenuCreator(new IMenuCreator() {
+			
+			private Menu menu;
+			private MenuManager mm;
+
+			@Override
+			public Menu getMenu(Menu parent) {
+				return null;
+			}
+			
+			@Override
+			public Menu getMenu(Control parent) {
+				if (mm == null) {
+					mm = new MenuManager();
+					for (int[] s : WELL_KNOWN_SIZES)
+						mm.add(new SizeAction(s[0], s[1]));
+					menu = mm.createContextMenu(parent);
+				}
+				return menu;
+			}
+			
+			@Override
+			public void dispose() {
+				mm.dispose();
+				mm = null;
+				menu = null;
+			}
 		});
-		for (int[] s : WELL_KNOWN_SIZES)
-			toolBarManager.add(new SizeAction(s[0], s[1]));
-		GridDataFactory.fillDefaults().grab(true, false).applyTo(toolBarManager.getControl());
-		canvas = new Canvas(parent, SWT.NO_REDRAW_RESIZE);
+		toolBarManager.add(tAction);
+		toolBarManager.createControl(parent);
+		GridDataFactory.fillDefaults().grab(true, false).span(2, 1).applyTo(toolBarManager.getControl());
+		canvas = new Canvas(parent, SWT.NO_REDRAW_RESIZE | SWT.V_SCROLL);
 		canvas.addPaintListener(this);
 		GridDataFactory.fillDefaults().grab(true, true).applyTo(canvas);
 		
+		canvas.addMouseListener(new MouseListener() {
+			@Override
+			public void mouseUp(MouseEvent e) {
+			}
+			@Override
+			public void mouseDown(MouseEvent e) {
+				if (e.button == 1) {
+					String hd = String.format("X:%d Y:%d\n", e.x, e.y);
+					int index = (e.x + e.y * width) * bytePerPixel;
+					for (int i = 0 ; i < 16 ; i++) {
+						byte v = buffer.get(index + i);
+						hd += String.format("%02x ", v);
+					}
+					hd += "\n";
+					for (int i = 0 ; i < 4 ; i++) {
+						int v = buffer.getInt(index + i * 4);
+						hd += String.format("   %08x ", v);
+					}
+					hexDump.setText(hd);
+				}
+			}
+			@Override
+			public void mouseDoubleClick(MouseEvent e) {
+			}
+		});
+		
+		hexDump = new Text(parent, SWT.MULTI);
+		GridDataFactory.fillDefaults().grab(true, true).applyTo(hexDump);
+
 		MenuManager mm = new MenuManager();
 		mm.add(new RGBAction("RGB"));
 		mm.add(new RGBAction("RBG"));
@@ -280,6 +358,27 @@ public class ImageEditor extends EditorPart implements PaintListener {
 		mm.add(new Separator());
 		mm.add(new EndianAction(ByteOrder.LITTLE_ENDIAN));
 		mm.add(new EndianAction(ByteOrder.BIG_ENDIAN));
+		mm.add(new Action("RGB32") {
+			@Override
+			public void run() {
+				bytePerPixel = 4;
+				createImage();
+			}
+		});
+		mm.add(new Action("RGB16") {
+			@Override
+			public void run() {
+				bytePerPixel = 2;
+				createImage();
+			}
+		});
+		mm.add(new Action("SWAP16") {
+			@Override
+			public void run() {
+				swap16 = !swap16;
+				createImage();
+			}
+		});
 		Menu menu = mm.createContextMenu(canvas);
 		canvas.setMenu(menu);
 		
@@ -309,8 +408,24 @@ public class ImageEditor extends EditorPart implements PaintListener {
 		d[3 - adjustForAlpha(greenShift, alphaShift)/8] = 'G';
 		d[3 - adjustForAlpha(blueShift, alphaShift)/8] = 'B';
 		d[3 - alphaShift/8] = 'A';
-		if (description != null && !description.isDisposed())
-			description.setText("Format: " + new String(d) + " width: " + width);
+
+		int redMask = 0x00FF << (adjustForAlpha(redShift, alphaShift));
+		int greenMask = 0x00FF << (adjustForAlpha(greenShift, alphaShift));
+		int blueMask = 0x00FF << (adjustForAlpha(blueShift, alphaShift));
+		int alphaMask = 0x00FF << alphaShift;
+
+		if (description != null && !description.isDisposed()) {
+			String string = "Format: " + new String(d);
+			string += " w:" + width;
+			string += " e:" + endianess;
+			string += " bpp:" + bytePerPixel;
+			string += String.format("redMask:%08x ", redMask);
+			string += String.format("greenMask:%08x ", greenMask);
+			string += String.format("blueMask:%08x ", blueMask);
+			string += String.format("alphaMask:%08x ", alphaMask);
+			string += String.format(" swap16:%b", swap16);
+			description.setText(string);
+		}
 	}
 	
 	private int[] isWellKnownSize(int size, int bytePerPixel) {
