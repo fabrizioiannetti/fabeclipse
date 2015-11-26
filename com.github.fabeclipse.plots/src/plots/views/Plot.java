@@ -7,20 +7,17 @@ import org.eclipse.swt.graphics.Rectangle;
 
 public class Plot implements IPlottable {
 	// the data to plot
-	private int[] indexes;
+	private int[] domain;
 	private int[] values;
 
 	// the range in the data domain
-	private int start;
-	private int end;
+	private PlotRange range;
 	// range in the data co-domain
 	private int min;
 	private int max;
 
 	// modes
 	boolean baseZero = false;
-	private int startIndex;
-	private int endIndex;
 
 	public Plot(int[] vals) {
 		setData(vals);
@@ -29,7 +26,7 @@ public class Plot implements IPlottable {
 	public void setData(int[] indexes, int[] values) {
 		if (indexes == null || values == null || indexes.length != values.length)
 			throw new IllegalArgumentException("indexes and values must be non null and the same size");
-		this.indexes = indexes;
+		this.domain = indexes;
 		this.values = values;
 		// use the complete domain as range
 		setDomainRange(indexes[0], indexes[indexes.length - 1]);
@@ -57,6 +54,7 @@ public class Plot implements IPlottable {
 	public void plot(GC gc, Rectangle dst) {
 		if (values.length == 0)
 			return;
+		
 		int base = baseZero ? 0 : min;
 		int lx = 0;
 		int ly = 0;
@@ -65,28 +63,34 @@ public class Plot implements IPlottable {
 
 		// preconditions
 		try {
-			check(end - start > 0);
+			check(range.getSpan() > 0);
 			check(values.length > 1);
-			check(indexes.length > 0);
-			check(indexes[indexes.length -1] - indexes[0] > 0);
+			check(domain.length > 0);
+			check(domain[domain.length -1] - domain[0] > 0);
 		} catch (Exception e) {
 			// these exceptions lead to no graph being drawn
 			return;
 		}
 
-		dst = new Rectangle(dst.x, dst.y, dst.width, dst.height);
+		dst = range.clippedDisplayRect(dst);
+		
 		// adjust origin x
 		// the client has set a domain range that should be mapped to the dst rectangle
 		// if the range is smaller than the domain, then the plot will start  with an offset
 		// from dst.x origin
-		dst.x += (start - indexes[0]) * dst.width / (indexes[indexes.length - 1] - indexes[0]);
-		dst.width = (end - start) * dst.width / (indexes[indexes.length - 1] - indexes[0]);
+		dst.x += (range.getRangeStart() - domain[0]) * dst.width / (domain[domain.length - 1] - domain[0]);
+		dst.width = range.getRangeLength() * dst.width / (domain[domain.length - 1] - domain[0]);
 
+		int startIndex = range.getDomainStartIndex(domain);
+		int endIndex = range.getDomainEndIndex(domain);
 		final double scalex = (double) (endIndex - startIndex) / dst.width;
 		final double scaley = (double) dst.height / (max - base);
 
 		// only paint what is visible
 		dst = dst.intersection(gc.getClipping());
+		if (dst.isEmpty())
+			return;
+
 		lx = 0;
 		ly = dst.y + dst.height - (int)((values[(int)((lx + (dst.x - origx)) * scalex)] - base) * scaley);
 		for (int x = 1; x < dst.width; x++) {
@@ -126,11 +130,6 @@ public class Plot implements IPlottable {
 	}
 
 	@Override
-	public int[] getDomainExtension() {
-		return new int[] {start, end};
-	}
-
-	@Override
 	public Plot setDomainRange(int[] range) {
 		if (range == null || range.length != 2)
 			throw new IllegalArgumentException("Range array must have two elements");
@@ -140,63 +139,12 @@ public class Plot implements IPlottable {
 
 	@Override
 	public Plot setDomainRange(int start, int end) {
-		this.start = start;
-		this.end = end;
-		startIndex = getDomainStartIndex(start);
-		endIndex = getDomainEndIndex(end);
+		int dataStart = domain[0];
+		int dataLength = domain[domain.length - 1] - dataStart;
+		range = new PlotRange(dataStart, dataLength).setRange(start, end);
 		return this;
 	}
 
-	private int getDomainStartIndex(int from) {
-		// check if the requested position is outside
-		// the domain
-		if (from <= indexes[0])
-			return indexes[0];
-		if (from >= indexes[indexes.length - 1])
-			return indexes[indexes.length - 1];
-
-		// TODO: can I use the stdlib binary search here?
-		int i,j, k;
-		i = 0;
-		j = indexes.length;
-		k = (i + j) / 2;
-		while (!(indexes[k] <= from && indexes[k + 1] > from)) {
-			System.out.printf("xstart: check k=%d for vl=%d\n", k, from);
-			if (indexes[k] < from) {
-				i = (k + j) / 2;
-			} else {
-				j = (k + i) / 2;
-			}
-			k = (i + j) / 2;
-		}
-		System.out.printf("xstart: k=%d for vl=%d\n", k, from);
-		return k;
-	}
-	private int getDomainEndIndex(int to) {
-		// check if the requested position is outside
-		// the domain
-		if (to <= indexes[0])
-			return 0;
-		if (to >= indexes[indexes.length - 1])
-			return indexes.length - 1;
-
-		// TODO: can I use the stdlib binary search here?
-		int i,j, k;
-		i = 0;
-		j = indexes.length;
-		k = (i + j) / 2;
-		while (!(indexes[k - 1] < to && indexes[k] >= to)) {
-			System.out.printf("xend  : check k=%d for vl=%d\n", k, to);
-			if (indexes[k] < to) {
-				i = (k + j) / 2;
-			} else {
-				j = (k + i) / 2;
-			}
-			k = (i + j) / 2;
-		}
-		System.out.printf("xend  : k=%d for vl=%d\n", k, to);
-		return k;
-	}
 	@Override
 	public int getCount() {
 		return values == null ? 0 : values.length;

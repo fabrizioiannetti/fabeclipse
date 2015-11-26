@@ -21,7 +21,4 @@ public interface IPlottable {
 	Plot setDomainRange(int start, int end);
 
 	Plot setDomainRange(int[] range);
-
-	int[] getDomainExtension();
-
 }

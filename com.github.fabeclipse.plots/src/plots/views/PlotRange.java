@@ -24,15 +24,11 @@ public class PlotRange {
 	private int rangeStart;
 	private int rangeLength;
 
-	// the display rectangle where range is mapped
-	private Rectangle displayRect;
-
-	public PlotRange(int dataStart, int dataLength, Rectangle displayRect) {
+	public PlotRange(int dataStart, int dataLength) {
 		this.dataStart = dataStart;
 		this.dataLength = dataLength;
 		this.rangeStart = dataStart;
 		this.rangeLength = dataLength;
-		this.displayRect = displayRect;
 	}
 
 	public PlotRange setRange(int rangeStart, int rangeLength) {
@@ -41,21 +37,13 @@ public class PlotRange {
 		return this;
 	}
 
-	public PlotRange setDisplayRect(Rectangle r) {
-		displayRect.x = r.x;
-		displayRect.y = r.y;
-		displayRect.width = r.width;
-		displayRect.height = r.height;
-		return this;
-	}
-	
 	/**
 	 * Return a rectangle that contains the whole data span
 	 * and has the same scale as the given one has for the range.
 	 * 
 	 * @return the domain display rectangle
 	 */
-	public Rectangle domainDisplayRect() {
+	public Rectangle domainDisplayRect(Rectangle displayRect) {
 		Rectangle s = new Rectangle(displayRect.x, displayRect.y, displayRect.width, displayRect.height);
 		s.x += (dataStart - rangeStart) * dataLength / rangeLength;
 		s.width = displayRect.width * dataLength / rangeLength;
@@ -69,15 +57,15 @@ public class PlotRange {
 	 * 
 	 * @return the clipped rectangle
 	 */
-	public Rectangle clippedDisplayRect() {
+	public Rectangle clippedDisplayRect(Rectangle displayRect) {
 		Rectangle r = new Rectangle(displayRect.x, displayRect.y, displayRect.width, displayRect.height);
-		r.intersect(domainDisplayRect());
+		r.intersect(domainDisplayRect(displayRect));
 		return r;
 	}
 
 	/**
 	 * Return the factor that converts from display coordinates
-	 * to domain values where the given rectangle map to the
+	 * to domain values where the given rectangle maps to the
 	 * full domain.
 	 * 
 	 * X = f * (x - offsetX)
@@ -89,7 +77,7 @@ public class PlotRange {
 	 * 
 	 * @return the scale factor f
 	 */
-	public float scaleFactorX() {
+	public float scaleFactorX(Rectangle displayRect) {
 		float f = displayRect.width / rangeLength;
 		return f;
 	}
@@ -99,7 +87,72 @@ public class PlotRange {
 	 * 
 	 * @return the offset
 	 */
-	public int offsetX() {
+	public int offsetX(Rectangle displayRect) {
 		return displayRect.x;
+	}
+
+	public int getDomainStartIndex(int[] domain) {
+		int from = rangeStart;
+		// check if the requested position is outside
+		// the domain
+		if (from <= domain[0])
+			return domain[0];
+		if (from >= domain[domain.length - 1])
+			return domain[domain.length - 1];
+
+		// TODO: can I use the stdlib binary search here?
+		int i,j, k;
+		i = 0;
+		j = domain.length;
+		k = (i + j) / 2;
+		while (!(domain[k] <= from && domain[k + 1] > from)) {
+			System.out.printf("xstart: check k=%d for vl=%d\n", k, from);
+			if (domain[k] < from) {// 12 -> [10 11 12] -> [11 12]
+				i = k;
+			} else {
+				j = k;
+			}
+			k = (i + j) / 2;
+		}
+		System.out.printf("xstart: k=%d for vl=%d\n", k, from);
+		return k;
+	}
+
+	public int getDomainEndIndex(int[] indexes) {
+		int to = rangeStart + rangeLength;
+		// check if the requested position is outside
+		// the domain
+		if (to <= indexes[0])
+			return 0;
+		if (to >= indexes[indexes.length - 1])
+			return indexes.length - 1;
+
+		// TODO: can I use the stdlib binary search here?
+		int i,j, k;
+		i = 0;
+		j = indexes.length;
+		k = (i + j) / 2;
+		while (!(indexes[k - 1] < to && indexes[k] >= to)) {
+			System.out.printf("xend  : check k=%d for vl=%d\n", k, to);
+			if (indexes[k] < to) {
+				i = k;
+			} else {
+				j = k;
+			}
+			k = (i + j) / 2;
+		}
+		System.out.printf("xend  : k=%d for vl=%d\n", k, to);
+		return k;
+	}
+
+	public int getSpan() {
+		return rangeLength;
+	}
+
+	public int getRangeStart() {
+		return rangeStart;
+	}
+	public int getRangeLength() {
+		return rangeLength;
 	}
 }
