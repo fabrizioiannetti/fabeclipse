@@ -1,7 +1,7 @@
 /**
  * Copyright 2015 Fabrizio Iannetti.
  */
-package com.github.fabeclipse.textedgrep.views;
+package com.github.fabeclipse.textedgrep.internal.ui;
 
 import org.eclipse.jface.fieldassist.ComboContentAdapter;
 import org.eclipse.jface.fieldassist.FieldDecoration;

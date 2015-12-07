@@ -1,7 +1,7 @@
 /**
  * Copyright 2015 Fabrizio Iannetti.
  */
-package com.github.fabeclipse.textedgrep.handlers;
+package com.github.fabeclipse.textedgrep.internal.ui;
 
 import org.eclipse.core.commands.AbstractHandler;
 
@@ -13,8 +13,6 @@ import org.eclipse.ui.IViewPart;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.handlers.HandlerUtil;
-
-import com.github.fabeclipse.textedgrep.views.GrepView;
 
 public class GrepCommand extends AbstractHandler {
 	@Override

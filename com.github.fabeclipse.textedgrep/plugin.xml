@@ -9,7 +9,7 @@
       </category>
       <view
             category="com.github.fabeclipse.textedgrep.fabeclipse"
-            class="com.github.fabeclipse.textedgrep.views.GrepView"
+            class="com.github.fabeclipse.textedgrep.internal.ui.GrepView"
             id="com.github.fabeclipse.textedgrep.grepview"
             name="Grep"
             restorable="true">
@@ -23,7 +23,7 @@
       </category>
       <command
             categoryId="org.eclipse.ui.category.textEditor"
-            defaultHandler="com.github.fabeclipse.textedgrep.handlers.GrepCommand"
+            defaultHandler="com.github.fabeclipse.textedgrep.internal.ui.GrepCommand"
             description="Open/Go to grep view"
             id="com.github.fabeclipse.textedgrep.OpenGrep"
             name="Grep Text">

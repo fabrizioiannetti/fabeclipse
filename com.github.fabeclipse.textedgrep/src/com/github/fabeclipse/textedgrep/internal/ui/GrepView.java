@@ -1,7 +1,7 @@
 /**
  * Copyright 2015 Fabrizio Iannetti.
  */
-package com.github.fabeclipse.textedgrep.views;
+package com.github.fabeclipse.textedgrep.internal.ui;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -68,7 +68,7 @@ import org.eclipse.ui.texteditor.AbstractTextEditor;
 
 import com.github.fabeclipse.textedgrep.Activator;
 import com.github.fabeclipse.textedgrep.GrepTool;
-import com.github.fabeclipse.textedgrep.GrepTool.GrepContext;
+import com.github.fabeclipse.textedgrep.IGrepContext;
 import com.github.fabeclipse.textedgrep.IGrepTarget;
 
 /**
@@ -97,7 +97,7 @@ public class GrepView extends ViewPart implements IAdaptable {
 	private TextViewer viewer;
 	private String lastRegex;
 	private GrepTool grepTool;
-	private GrepContext grepContext;
+	private IGrepContext grepContext;
 	private Color cursorLineColor;
 	private Color highlightColor;
 	private boolean initialCaseSensitivity;
@@ -203,7 +203,7 @@ public class GrepView extends ViewPart implements IAdaptable {
 		viewer.getTextWidget().addLineBackgroundListener(new LineBackgroundListener() {
 			@Override
 			public void lineGetBackground(LineBackgroundEvent event) {
-				GrepContext gc = grepContext;
+				IGrepContext gc = grepContext;
 				IDocument document = viewer.getDocument();
 				if (gc != null) {
 					int line;
@@ -722,7 +722,7 @@ public class GrepView extends ViewPart implements IAdaptable {
 		IEditorPart activeEditor = window.getActivePage().getActiveEditor();
 		IGrepTarget newTarget = (IGrepTarget) activeEditor.getAdapter(IGrepTarget.class);
 		if (newTarget == null && activeEditor instanceof AbstractTextEditor) {
-			newTarget = new GrepTool.DocumentGrepTarget((AbstractTextEditor) activeEditor);
+			newTarget = new DocumentGrepTarget((AbstractTextEditor) activeEditor);
 		}
 		if (newTarget != null) {
 			target = newTarget;
