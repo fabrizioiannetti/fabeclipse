@@ -115,7 +115,9 @@ public class RegexEntry extends Composite {
 			
 			@Override
 			public void widgetDefaultSelected(SelectionEvent e) {
-				listener.grep(getRegexpText(), RegexEntry.this);
+				String text = getRegexpText();
+				if (text != null && !text.isEmpty())
+					listener.grep(text, RegexEntry.this);
 			}
 		});
 		

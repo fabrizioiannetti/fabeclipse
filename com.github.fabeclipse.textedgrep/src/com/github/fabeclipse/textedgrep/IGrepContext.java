@@ -22,5 +22,4 @@ public interface IGrepContext {
 	String getText();
 
 	IGrepTarget getTarget();
-
 }

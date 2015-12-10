@@ -26,4 +26,5 @@ public interface IGrepTarget {
 
 	public boolean isSame(IWorkbenchPart part);
 	public String getTitle();
+
 }

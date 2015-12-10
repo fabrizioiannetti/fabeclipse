@@ -41,6 +41,11 @@ public class GrepTool {
 	}
 
 	/**
+	 * Prepare for a grep operation.
+	 * 
+	 * The function returns a context that can be used
+	 * to perform the grep later.
+	 * 
 	 * @since 3.0
 	 */
 	public IGrepContext grepStart(IGrepTarget target) {
@@ -53,13 +58,26 @@ public class GrepTool {
 	 */
 	public IGrepContext grep(IGrepTarget target, boolean multiple) {
 		GrepContext grepContext = new GrepContext(target);
-		return grep(grepContext, multiple);
+		try {
+			return grep(grepContext, new GrepMonitor(), multiple);
+		} catch (InterruptedException e) {
+			// should never happen!
+			// TODO: log
+			e.printStackTrace();
+		}
+		return grepContext;
 	}
 
 	/**
+	 * 
+	 * @throws InterruptedException 
 	 * @since 3.0
 	 */
-	public IGrepContext grep(IGrepContext gc, boolean multiple) {
+	public IGrepContext grep(IGrepContext gc, GrepMonitor monitor, boolean multiple) throws InterruptedException {
+		// check the grep context is of the right concrete type
+		if (!(gc instanceof GrepContext)) {
+			throw new IllegalArgumentException("Illegal Grep context implementation");
+		}
 		GrepContext grepContext = (GrepContext) gc;
 		IGrepTarget target = grepContext.getTarget();
 		// start with 10 thousands lines (in the grep result)
@@ -78,8 +96,12 @@ public class GrepTool {
 		int submittedGrepLineNum = 0;
 		int matchNum = 0;
 		int submittedMatchNum = 0;
+		int progressPercent = -1; // unknown
 		target.start();
+		monitor.fireProgress(progressPercent);
 		while(target.hasNextLine()) {
+			if (monitor.isCanceled())
+				throw new InterruptedException("Grep cancelled");
 			String line = target.nextLine();
 			boolean found = false;
 			// run each matcher on the line, the first one wins, i.e.
@@ -95,6 +117,7 @@ public class GrepTool {
 						if ((grepLineNum - submittedGrepLineNum) >= lineMap.length) {
 							// add full chunks to the grep context
 							grepContext.addLineChunks(lineMap, matchMap, colorMap);
+							monitor.fireChange(grepContext);
 							// allocate new chunks
 							lineMap  = new int[lineMap.length];
 							matchMap = new int[lineMap.length];

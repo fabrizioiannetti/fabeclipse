@@ -5,6 +5,8 @@ package com.github.fabeclipse.textedgrep.internal.ui;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.eclipse.core.runtime.IAdaptable;
 import org.eclipse.jface.action.Action;
@@ -67,6 +69,7 @@ import org.eclipse.ui.part.ViewPart;
 import org.eclipse.ui.texteditor.AbstractTextEditor;
 
 import com.github.fabeclipse.textedgrep.Activator;
+import com.github.fabeclipse.textedgrep.GrepMonitor;
 import com.github.fabeclipse.textedgrep.GrepTool;
 import com.github.fabeclipse.textedgrep.IGrepContext;
 import com.github.fabeclipse.textedgrep.IGrepTarget;
@@ -86,6 +89,109 @@ public class GrepView extends ViewPart implements IAdaptable {
 	private static final String KEY_REGEX_HISTORY = "regexhistory";
 	private static final String KEY_DEFAULT_COLOR = "regexcolour";
 
+	class GrepOp {
+		private final boolean multiple;
+		private final GrepMonitor monitor = new GrepMonitor();
+		private final GrepTool tool;
+		private final IGrepContext context;
+		
+		public GrepOp(IGrepTarget target, String[] rxList, boolean caseSensitive, boolean multiple) {
+			super();
+			this.multiple = multiple;
+			tool = new GrepTool(rxList, caseSensitive);
+			context = tool.grepStart(target);
+		}
+
+		public IGrepContext getContext() {
+			return context;
+		}
+
+		public boolean grep() {
+			try {
+				tool.grep(context, monitor, multiple);
+				return true; 
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+				return false;
+			}
+		}
+
+		void cancel() {
+			monitor.cancel();
+		}
+	}
+
+	private ArrayBlockingQueue<GrepOp> grepQueue = new ArrayBlockingQueue<GrepView.GrepOp>(10);
+	private AtomicReference<GrepOp> grepCurr = new AtomicReference<GrepView.GrepOp>();
+
+	private IGrepContext submitGrep(IGrepTarget target, String[] regex, boolean caseSensitive, boolean multi) {
+		GrepOp op = new GrepOp(target, regex, caseSensitive, multi);
+
+		// cancel all queued greps (actually one at most)
+		grepQueue.clear();
+		
+		// queue the new grep
+		boolean queued = grepQueue.offer(op);
+
+		if (!queued) {
+			// TODO: log
+		} else {
+			// cancel running grep, if any
+			// (but not the one we just queued)
+			GrepOp cop = grepCurr.get();
+			if (cop != null && cop != op)
+				cop.cancel();
+		}		
+		return op.getContext();
+	}
+
+	private final Thread grepThread = new Thread() {
+		public void run() {
+			ArrayList<GrepOp> ops = new ArrayList<GrepOp>();
+			for (;;) {
+				GrepOp op;
+				try {
+					op = grepQueue.take();
+				} catch (InterruptedException e1) {
+					// TODO log
+					System.out.println("grepThread interrupted, wait again");
+					continue;
+				}
+				grepQueue.drainTo(ops);
+				// only use the latest
+				if (!ops.isEmpty()) {
+					op = ops.get(ops.size() - 1);
+					ops.clear();
+				}
+				grepCurr.set(op);
+				final IGrepContext ctxt = op.getContext();
+				try {
+					if (op.grep())
+						GrepView.this.getSite().getShell().getDisplay().asyncExec(new Runnable() {
+							@Override
+							public void run() {
+								String text = ctxt.getText();
+								System.out.println("TEXT:\n" + text);
+								viewer.getDocument().set(text);
+								updateHighlightRanges();
+							}
+						});
+				} catch (Exception e) {
+					// grep was interrupted, just go on
+				} finally {
+					grepCurr.set(null);
+					GrepView.this.getSite().getShell().getDisplay().asyncExec(new Runnable() {
+						@Override
+						public void run() {
+							viewer.getControl().setEnabled(true);
+							viewer.getControl().setFocus();
+						}
+					});
+				}
+			}
+		};
+	};
+
 	/**
 	 * @since 1.2
 	 */
@@ -96,7 +202,6 @@ public class GrepView extends ViewPart implements IAdaptable {
 
 	private TextViewer viewer;
 	private String lastRegex;
-	private GrepTool grepTool;
 	private IGrepContext grepContext;
 	private Color cursorLineColor;
 	private Color highlightColor;
@@ -156,6 +261,7 @@ public class GrepView extends ViewPart implements IAdaptable {
 
 	@Override
 	public void createPartControl(final Composite parent) {
+		grepThread.start();
 		GridLayout layout = new GridLayout(1, false);
 		parent.setLayout(layout);
 		layout.marginHeight = 0;
@@ -209,9 +315,12 @@ public class GrepView extends ViewPart implements IAdaptable {
 					int line;
 					try {
 						line = document.getLineOfOffset(event.lineOffset);
-						int index = gc.getColorForGrepLine(line);
-						RegexEntry entry = regexEntries.get(index);
-						event.lineBackground = entry.getRegexColor();
+						// grep context can only operate on non empty documents
+						if (document.getLength() > 0) {
+							int index = gc.getColorForGrepLine(line);
+							RegexEntry entry = regexEntries.get(index);
+							event.lineBackground = entry.getRegexColor();
+						}
 					} catch (BadLocationException e) {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
@@ -275,7 +384,7 @@ public class GrepView extends ViewPart implements IAdaptable {
 		hmAction.setChecked(initialHighlightMultiple);
 		menuManager.add(hmAction);
 
-		Action colorAction = new Action("Highlight color") {
+		Action colorAction = new Action("Highlight color...") {
 			@Override
 			public void run() {
 				Shell shell = getSite().getShell();
@@ -294,7 +403,7 @@ public class GrepView extends ViewPart implements IAdaptable {
 		};
 		menuManager.add(colorAction);
 
-		menuManager.add(new Action("Edit History") {
+		menuManager.add(new Action("Edit History...") {
 			@Override
 			public void run() {
 				String history = "";
@@ -366,7 +475,6 @@ public class GrepView extends ViewPart implements IAdaptable {
 			public void grep(String text, RegexEntry rxe) {
 				// the user pressed ENTER
 				doGrep();
-				viewer.getControl().setFocus();
 				// add regex to history if:
 				// * not empty
 				// * history is empty, or last element of history is not the same
@@ -587,17 +695,19 @@ public class GrepView extends ViewPart implements IAdaptable {
 			lastRegex = regexEntries.get(rxi).getRegexpText();
 			rxList[rxi]   = lastRegex;
 		}
-		grepTool = new GrepTool(rxList, csAction.isChecked());
 		updateTarget();
 
 		if (target == null)
 			return;
 
-		grepContext = grepTool.grep(target, hmAction.isChecked());
+		grepContext = submitGrep(target, rxList, csAction.isChecked(), hmAction.isChecked());
+
 		Document document = new Document(grepContext.getText());
 		viewer.setDocument(document);
-		updateHighlightRanges();
 		viewer.getControl().setToolTipText("source: " + target.getTitle());
+
+		// disable the text viewer, will be enabled again when the grep is done
+		viewer.getControl().setEnabled(false);
 	}
 
 	private int computeRangeCount() {
@@ -670,11 +780,19 @@ public class GrepView extends ViewPart implements IAdaptable {
 		if (grepContext == null)
 			return;
 		
-		int j = 0;
 		AbstractDocument document = (AbstractDocument) viewer.getDocument();
+
+		// return immediately if the document is empty, as it will still
+		// report 1 line of content below and this can lead to invalid
+		// access to the grep data structures
+		if (document.getLength() == 0)
+			return;
+
 		int lines = document.getNumberOfLines();
+		int j = 0;
+		int totalMatches;
 		try {
-			int totalMatches = grepContext.getNumberOfMatches();
+			totalMatches = grepContext.getNumberOfMatches();
 			// 1 range for each highlight (background), 1 range for each line (foreground)
 //			int[] ranges = new int[totalMatches*2 + lines*2];
 //			StyleRange[] styles = new StyleRange[totalMatches + lines];

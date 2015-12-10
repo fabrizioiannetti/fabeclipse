@@ -11,7 +11,7 @@ import com.github.fabeclipse.textedgrep.IGrepTarget;
  */
 public class GrepContext implements IGrepContext {
 	protected static class GrowingIntArray {
-		private int chunkSize;
+		private int chunkSize = 1; // to prevent /0 exceptions in getAt()
 		private ArrayList<int[]> data = new ArrayList<int[]>(1000);
 		public GrowingIntArray addChunk(int[] chunk) {
 			if (data.size() == 0)
@@ -25,7 +25,7 @@ public class GrepContext implements IGrepContext {
 			return data.get(position / chunkSize)[position % chunkSize];
 		}
 		public int size() {
-			return data.size() + chunkSize;
+			return data.size() * chunkSize;
 		}
 	}
 	private final IGrepTarget target;
@@ -177,9 +177,14 @@ public class GrepContext implements IGrepContext {
 	}
 
 	public void seal() {
-		// remove trailing newline
-		if (grep.length() > 0)
-			grep.deleteCharAt(grep.length() - 1);
+		// remove trailing newline, as the StyledText Document
+		// returns one line more if the last line has a line terminator
+		if (grep.length() > 0) {
+			char lastChar = grep.charAt(grep.length() - 1);
+			if (lastChar == '\n') {
+				grep.deleteCharAt(grep.length() - 1);
+			}
+		}
 		formatter.close();
 		linesDone = true;
 		matchDone = true;
