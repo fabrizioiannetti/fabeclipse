@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.IntConsumer;
 
 import org.eclipse.core.runtime.IAdaptable;
 import org.eclipse.jface.action.Action;
@@ -100,6 +101,12 @@ public class GrepView extends ViewPart implements IAdaptable {
 			this.multiple = multiple;
 			tool = new GrepTool(rxList, caseSensitive);
 			context = tool.grepStart(target);
+			monitor.onProgress(new IntConsumer() {
+				@Override
+				public void accept(int p) {
+					// TODO: implement
+				}
+			});
 		}
 
 		public IGrepContext getContext() {
@@ -171,7 +178,6 @@ public class GrepView extends ViewPart implements IAdaptable {
 							@Override
 							public void run() {
 								String text = ctxt.getText();
-								System.out.println("TEXT:\n" + text);
 								viewer.getDocument().set(text);
 								updateHighlightRanges();
 							}

@@ -62,5 +62,9 @@ public class LargeFileGrepTarget implements IGrepTarget {
 	public String getTitle() {
 		return editor.getTitle();
 	}
+	@Override
+	public long getLength() {
+		return editor.getViewer().getModel().getLength();
+	}
 
 }

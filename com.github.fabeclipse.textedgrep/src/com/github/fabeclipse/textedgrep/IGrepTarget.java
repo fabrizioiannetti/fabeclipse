@@ -17,6 +17,15 @@ public interface IGrepTarget {
 	public boolean hasNextLine();
 	public String nextLine();
 
+	/**
+	 * Get the size in characters of the target content
+	 * 
+	 * @return the target length.
+	 * 
+	 * @since 3.0
+	 */
+	public long getLength();
+
 	// to sync grep view selection with target's one
 	public void select(int start, int length);
 	

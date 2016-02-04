@@ -91,5 +91,10 @@ public class DocumentGrepTarget implements IGrepTarget {
 	public String getTitle() {
 		return editor.getTitle();
 	}
+
+	@Override
+	public long getLength() {
+		return document.getLength();
+	}
 	
 }
