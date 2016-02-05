@@ -14,6 +14,7 @@ import org.eclipse.jface.action.Action;
 import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.action.IToolBarManager;
 import org.eclipse.jface.dialogs.InputDialog;
+import org.eclipse.jface.layout.GridDataFactory;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.resource.JFaceResources;
 import org.eclipse.jface.text.AbstractDocument;
@@ -91,22 +92,19 @@ public class GrepView extends ViewPart implements IAdaptable {
 	private static final String KEY_DEFAULT_COLOR = "regexcolour";
 
 	class GrepOp {
+		private static final int GREP_SHOW_PROGRESS_THRESHOLD_PERCENT = 50;
+		private static final int GREP_SHOW_PROGRESS_THRESHOLD_MS = 300;
 		private final boolean multiple;
-		private final GrepMonitor monitor = new GrepMonitor();
 		private final GrepTool tool;
 		private final IGrepContext context;
+		private final GrepMonitor monitor;
 		
 		public GrepOp(IGrepTarget target, String[] rxList, boolean caseSensitive, boolean multiple) {
 			super();
+			monitor = new GrepMonitor();
 			this.multiple = multiple;
 			tool = new GrepTool(rxList, caseSensitive);
 			context = tool.grepStart(target);
-			monitor.onProgress(new IntConsumer() {
-				@Override
-				public void accept(int p) {
-					// TODO: implement
-				}
-			});
 		}
 
 		public IGrepContext getContext() {
@@ -115,6 +113,41 @@ public class GrepView extends ViewPart implements IAdaptable {
 
 		public boolean grep() {
 			try {
+				final long tic = System.currentTimeMillis();
+				monitor.onProgress(new IntConsumer() {
+					private boolean showProgress;
+					@Override
+					public void accept(final int p) {
+						if (!showProgress) {
+							long elapsed = System.currentTimeMillis() - tic;
+							if (elapsed > GREP_SHOW_PROGRESS_THRESHOLD_MS &&
+									p < GREP_SHOW_PROGRESS_THRESHOLD_PERCENT) {
+								// seems to take long, enable a progress bar for the user
+								showProgress = true;
+								final Runnable cancelOp = new Runnable() {
+									@Override
+									public void run() {
+										monitor.cancel();
+									}
+								};
+								Display.getDefault().asyncExec(new Runnable() {
+									@Override
+									public void run() {
+										progress.onCancel(cancelOp);
+										showProgressBar(p);
+									}
+								});
+							}
+						} else {
+							Display.getDefault().asyncExec(new Runnable() {
+								@Override
+								public void run() {
+									showProgressBar(p);
+								}
+							});
+						}
+					}
+				});
 				tool.grep(context, monitor, multiple);
 				return true; 
 			} catch (InterruptedException e) {
@@ -264,6 +297,7 @@ public class GrepView extends ViewPart implements IAdaptable {
 
 	private IEditorPart targetPart;
 
+	private ProgressWithCancel progress;
 
 	@Override
 	public void createPartControl(final Composite parent) {
@@ -274,6 +308,9 @@ public class GrepView extends ViewPart implements IAdaptable {
 		layout.marginWidth = 0;
 
 		addRegexField(parent);
+
+		// progress indicator visible only during long running operations
+		addProgressBar(parent);
 
 		// vertical ruler that shows the original's line number
 		CompositeRuler ruler = new CompositeRuler();
@@ -287,7 +324,6 @@ public class GrepView extends ViewPart implements IAdaptable {
 					while (lines  > Math.pow(10, digits) -1) {
 						++digits;
 					}
-					System.out.println("Number of digits:" + digits + "for lines " + lines);
 					return digits;
 				}
 				return super.computeNumberOfDigits();
@@ -472,6 +508,30 @@ public class GrepView extends ViewPart implements IAdaptable {
 
 		// make tab key toggle between the regular expression text(s) and the viewer
 		makeTabList();
+	}
+
+	private void addProgressBar(Composite parent) {
+		progress = new ProgressWithCancel(parent, SWT.NONE);
+		progress.setVisible(false);
+		GridDataFactory.fillDefaults().grab(true, false).exclude(true).applyTo(progress);
+	}
+
+	private void showProgressBar(int percent) {
+		final GridData gd = (GridData) progress.getLayoutData();
+		if (percent == 100) {
+			gd.exclude = true;
+			progress.setVisible(false);
+			progress.getParent().layout();
+		} else {
+			if (gd.exclude) {
+				progress.setProgress(percent, true);
+				gd.exclude = false;
+				progress.setVisible(true);
+				progress.getParent().layout();
+			} else {
+				progress.setProgress(percent, false);
+			}
+		}
 	}
 
 	private void addRegexField(final Composite parent) {
