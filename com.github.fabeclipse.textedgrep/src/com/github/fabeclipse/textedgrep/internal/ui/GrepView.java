@@ -112,48 +112,37 @@ public class GrepView extends ViewPart implements IAdaptable {
 		}
 
 		public boolean grep() {
-			try {
-				final long tic = System.currentTimeMillis();
-				monitor.onProgress(new IntConsumer() {
-					private boolean showProgress;
-					@Override
-					public void accept(final int p) {
-						if (!showProgress) {
-							long elapsed = System.currentTimeMillis() - tic;
-							if (elapsed > GREP_SHOW_PROGRESS_THRESHOLD_MS &&
-									p < GREP_SHOW_PROGRESS_THRESHOLD_PERCENT) {
-								// seems to take long, enable a progress bar for the user
-								showProgress = true;
-								final Runnable cancelOp = new Runnable() {
-									@Override
-									public void run() {
-										monitor.cancel();
-									}
-								};
-								Display.getDefault().asyncExec(new Runnable() {
-									@Override
-									public void run() {
-										progress.onCancel(cancelOp);
-										showProgressBar(p);
-									}
-								});
-							}
-						} else {
+			final long tic = System.currentTimeMillis();
+			monitor.onProgress(new IntConsumer() {
+				private boolean showProgress;
+				@Override
+				public void accept(final int p) {
+					if (!showProgress) {
+						long elapsed = System.currentTimeMillis() - tic;
+						if (elapsed > GREP_SHOW_PROGRESS_THRESHOLD_MS &&
+								p < GREP_SHOW_PROGRESS_THRESHOLD_PERCENT) {
+							// seems to take long, enable a progress bar for the user
+							showProgress = true;
 							Display.getDefault().asyncExec(new Runnable() {
 								@Override
 								public void run() {
+									progress.onCancel(monitor);
 									showProgressBar(p);
 								}
 							});
 						}
+					} else {
+						Display.getDefault().asyncExec(new Runnable() {
+							@Override
+							public void run() {
+								showProgressBar(p);
+							}
+						});
 					}
-				});
-				tool.grep(context, monitor, multiple);
-				return true; 
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-				return false;
-			}
+				}
+			});
+			tool.grep(context, monitor, multiple);
+			return true;
 		}
 
 		void cancel() {

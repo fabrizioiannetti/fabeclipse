@@ -58,13 +58,7 @@ public class GrepTool {
 	 */
 	public IGrepContext grep(IGrepTarget target, boolean multiple) {
 		GrepContext grepContext = new GrepContext(target);
-		try {
-			return grep(grepContext, new GrepMonitor(), multiple);
-		} catch (InterruptedException e) {
-			// should never happen!
-			// TODO: log
-			e.printStackTrace();
-		}
+		grep(grepContext, new GrepMonitor(), multiple);
 		return grepContext;
 	}
 
@@ -73,7 +67,7 @@ public class GrepTool {
 	 * @throws InterruptedException 
 	 * @since 3.0
 	 */
-	public IGrepContext grep(IGrepContext gc, GrepMonitor monitor, boolean multiple) throws InterruptedException {
+	public IGrepContext grep(IGrepContext gc, GrepMonitor monitor, boolean multiple) {
 		// check the grep context is of the right concrete type
 		if (!(gc instanceof GrepContext)) {
 			throw new IllegalArgumentException("Illegal Grep context implementation");
@@ -101,9 +95,7 @@ public class GrepTool {
 		monitor.fireProgress(progressPercent);
 		long readChars = 0;
 		final long targetLen = target.getLength();
-		while(target.hasNextLine()) {
-			if (monitor.isCanceled())
-				throw new InterruptedException("Grep cancelled");
+		while(target.hasNextLine() && !monitor.isCanceled()) {
 			String line = target.nextLine();
 			boolean found = false;
 			// run each matcher on the line, the first one wins, i.e.

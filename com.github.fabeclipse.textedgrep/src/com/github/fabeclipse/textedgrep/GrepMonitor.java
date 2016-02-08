@@ -26,9 +26,11 @@ public class GrepMonitor {
 	}
 	
 	/**
-	 * Function to handle the 
-	 * @param progressFunc
-	 * @return
+	 * Registers a function to handle the progress reporting.
+	 * 
+	 * @param progressFunc function called when progress changes, progress is
+	 *                     reported in percent, from 0 to 100 included.
+	 * @return this instance.
 	 */
 	public GrepMonitor onProgress(IntConsumer progressFunc) {
 		this.progressFunc = progressFunc;
