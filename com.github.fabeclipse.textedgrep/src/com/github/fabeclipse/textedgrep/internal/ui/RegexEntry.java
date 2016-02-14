@@ -42,7 +42,6 @@ public class RegexEntry extends Composite {
 	private Color regexColor;
 	private IRegexEntryListener listener;
 	private boolean showColorChooser = false;
-	private ContentAssistCommandAdapter regexpContentAssist;
 	
 	// default colour for foreground of the line
 	private static final RGB DEFAULT_REGEX_COLOR = new RGB(0, 0, 0);
@@ -124,7 +123,7 @@ public class RegexEntry extends Composite {
 		// add content assist (code from platform's FindAndReplaceDialog)
 		ComboContentAdapter contentAdapter= new ComboContentAdapter();
 		FindReplaceDocumentAdapterContentProposalProvider findProposer= new FindReplaceDocumentAdapterContentProposalProvider(true);
-		regexpContentAssist = new ContentAssistCommandAdapter(
+		new ContentAssistCommandAdapter(
 				regexpText,
 				contentAdapter,
 				findProposer,

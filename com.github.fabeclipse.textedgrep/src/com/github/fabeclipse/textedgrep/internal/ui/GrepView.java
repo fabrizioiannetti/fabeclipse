@@ -765,6 +765,7 @@ public class GrepView extends ViewPart implements IAdaptable {
 		viewer.getControl().setEnabled(false);
 	}
 
+/*
 	private int computeRangeCount() {
 		int j = 0;
 		AbstractDocument document = (AbstractDocument) viewer.getDocument();
@@ -823,6 +824,7 @@ public class GrepView extends ViewPart implements IAdaptable {
 		}
 		return j;
 	}
+*/
 	/**
 	 * Set the highlight colour for match regions in the text viewer.
 	 * 
@@ -977,7 +979,7 @@ public class GrepView extends ViewPart implements IAdaptable {
 		super.dispose();
 	}
 
-	@SuppressWarnings("rawtypes")
+	@SuppressWarnings({ "rawtypes", "unchecked" })
 	@Override
 	public Object getAdapter(Class adapter) {
 		Object object = super.getAdapter(adapter);
