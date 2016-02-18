@@ -15,6 +15,8 @@ import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.action.IToolBarManager;
 import org.eclipse.jface.dialogs.InputDialog;
 import org.eclipse.jface.layout.GridDataFactory;
+import org.eclipse.jface.preference.IPreferenceStore;
+import org.eclipse.jface.preference.PreferenceConverter;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.resource.JFaceResources;
 import org.eclipse.jface.text.AbstractDocument;
@@ -29,6 +31,8 @@ import org.eclipse.jface.text.TextViewer;
 import org.eclipse.jface.text.source.CompositeRuler;
 import org.eclipse.jface.text.source.LineNumberRulerColumn;
 import org.eclipse.jface.text.source.SourceViewer;
+import org.eclipse.jface.util.IPropertyChangeListener;
+import org.eclipse.jface.util.PropertyChangeEvent;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.CaretEvent;
 import org.eclipse.swt.custom.CaretListener;
@@ -66,8 +70,10 @@ import org.eclipse.ui.IWorkbenchPartReference;
 import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.actions.ActionFactory;
+import org.eclipse.ui.editors.text.EditorsUI;
 import org.eclipse.ui.part.EditorPart;
 import org.eclipse.ui.part.ViewPart;
+import org.eclipse.ui.texteditor.AbstractDecoratedTextEditorPreferenceConstants;
 import org.eclipse.ui.texteditor.AbstractTextEditor;
 
 import com.github.fabeclipse.textedgrep.Activator;
@@ -83,6 +89,8 @@ import com.github.fabeclipse.textedgrep.IGrepTarget;
  * @author fabrizio iannetti
  */
 public class GrepView extends ViewPart implements IAdaptable {
+	private static final String LINE_NUMBER_RULER_COLOR = AbstractDecoratedTextEditorPreferenceConstants.EDITOR_LINE_NUMBER_RULER_COLOR;
+
 	public static final String VIEW_ID = "com.github.fabeclipse.textedgrep.grepview";
 
 	private static final String KEY_GREPREGEX = "grepregex";
@@ -288,6 +296,8 @@ public class GrepView extends ViewPart implements IAdaptable {
 
 	private ProgressWithCancel progress;
 
+	private Color lnColor;
+
 	@Override
 	public void createPartControl(final Composite parent) {
 		grepThread.start();
@@ -303,7 +313,7 @@ public class GrepView extends ViewPart implements IAdaptable {
 
 		// vertical ruler that shows the original's line number
 		CompositeRuler ruler = new CompositeRuler();
-		ruler.addDecorator(0, new LineNumberRulerColumn() {
+		LineNumberRulerColumn lineNumberColumn = new LineNumberRulerColumn() {
 			@Override
 			protected int computeNumberOfDigits() {
 				// see SourceViewer, monkey see monkey do :)
@@ -324,7 +334,10 @@ public class GrepView extends ViewPart implements IAdaptable {
 				}
 				return super.createDisplayString(line);
 			}
-		});
+		};
+		initializeColors();
+		lineNumberColumn.setForeground(lnColor);
+		ruler.addDecorator(0, lineNumberColumn);
 		viewer = new SourceViewer(parent, ruler , SWT.FLAT | SWT.V_SCROLL | SWT.H_SCROLL);
 		viewer.getControl().setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
 		// use the default text font (the same used in text editor)
@@ -497,6 +510,42 @@ public class GrepView extends ViewPart implements IAdaptable {
 
 		// make tab key toggle between the regular expression text(s) and the viewer
 		makeTabList();
+	}
+
+	private void initializeColors() {
+		// get the line number ruler color from the editor plugin,
+		// to be consistent with the editor settings.
+		IPreferenceStore store = EditorsUI.getPreferenceStore();
+		final Display display = getViewSite().getShell().getDisplay();
+		store.addPropertyChangeListener(new IPropertyChangeListener() {
+			@Override
+			public void propertyChange(PropertyChangeEvent event) {
+				if (LINE_NUMBER_RULER_COLOR.equals(event.getProperty())) {
+					final Object newLnColor = event.getNewValue();
+					display.asyncExec(new Runnable() {
+						@Override
+						public void run() {
+							updateLineNumberColor(newLnColor);
+						}
+					});
+				}
+			}
+		});
+		String key = LINE_NUMBER_RULER_COLOR;
+		RGB rgb= null;
+		if (store.contains(key)) {
+			if (store.isDefault(key))
+				rgb= PreferenceConverter.getDefaultColor(store, key);
+			else
+				rgb= PreferenceConverter.getColor(store, key);
+		} else {
+			rgb = new RGB(0, 0, 0); // TODO: use text color
+		}
+		lnColor = EditorsUI.getSharedTextColors().getColor(rgb);
+	}
+
+	private void updateLineNumberColor(Object newLnColor) {
+		// TODO Auto-generated method stub
 	}
 
 	private void addProgressBar(Composite parent) {
