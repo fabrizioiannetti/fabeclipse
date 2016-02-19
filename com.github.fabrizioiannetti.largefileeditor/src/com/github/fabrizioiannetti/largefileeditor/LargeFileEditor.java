@@ -212,6 +212,7 @@ public class LargeFileEditor extends EditorPart implements IFindReplaceTarget {
 		// edit not supported
 	}
 	
+	@SuppressWarnings("unchecked")
 	@Override
 	public Object getAdapter(@SuppressWarnings("rawtypes") Class adapter) {
 		if (IGrepTarget.class.equals(adapter)) {

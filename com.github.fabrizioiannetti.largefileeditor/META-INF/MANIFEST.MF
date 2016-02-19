@@ -11,6 +11,6 @@ Require-Bundle: org.eclipse.ui,
  org.eclipse.osgi;bundle-version="3.9.0",
  org.eclipse.jface.text;bundle-version="3.8.101",
  org.eclipse.ui.workbench.texteditor;bundle-version="3.8.101",
- com.github.fabeclipse.textedgrep;bundle-version="2.0.0"
+ com.github.fabeclipse.textedgrep;bundle-version="3.0.0"
 Import-Package: org.eclipse.core.runtime,
  org.eclipse.ui.texteditor
