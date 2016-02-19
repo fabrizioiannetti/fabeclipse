@@ -19,6 +19,7 @@ import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.preference.PreferenceConverter;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.resource.JFaceResources;
+import org.eclipse.jface.resource.StringConverter;
 import org.eclipse.jface.text.AbstractDocument;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.CursorLinePainter;
@@ -298,6 +299,8 @@ public class GrepView extends ViewPart implements IAdaptable {
 
 	private Color lnColor;
 
+	private LineNumberRulerColumn lineNumberColumn;
+
 	@Override
 	public void createPartControl(final Composite parent) {
 		grepThread.start();
@@ -313,7 +316,7 @@ public class GrepView extends ViewPart implements IAdaptable {
 
 		// vertical ruler that shows the original's line number
 		CompositeRuler ruler = new CompositeRuler();
-		LineNumberRulerColumn lineNumberColumn = new LineNumberRulerColumn() {
+		lineNumberColumn = new LineNumberRulerColumn() {
 			@Override
 			protected int computeNumberOfDigits() {
 				// see SourceViewer, monkey see monkey do :)
@@ -521,7 +524,11 @@ public class GrepView extends ViewPart implements IAdaptable {
 			@Override
 			public void propertyChange(PropertyChangeEvent event) {
 				if (LINE_NUMBER_RULER_COLOR.equals(event.getProperty())) {
-					final Object newLnColor = event.getNewValue();
+					Object value = event.getNewValue();
+					// value for this property should always be a string
+					if (!(value instanceof String))
+						return;
+			        final RGB newLnColor = StringConverter.asRGB((String) value);
 					display.asyncExec(new Runnable() {
 						@Override
 						public void run() {
@@ -541,11 +548,15 @@ public class GrepView extends ViewPart implements IAdaptable {
 		} else {
 			rgb = new RGB(0, 0, 0); // TODO: use text color
 		}
-		lnColor = EditorsUI.getSharedTextColors().getColor(rgb);
+		updateLineNumberColor(rgb);
 	}
 
-	private void updateLineNumberColor(Object newLnColor) {
-		// TODO Auto-generated method stub
+	private void updateLineNumberColor(RGB rgb) {
+		lnColor = EditorsUI.getSharedTextColors().getColor(rgb);
+		if (lineNumberColumn != null) {
+			lineNumberColumn.setForeground(lnColor);
+			lineNumberColumn.redraw();
+		}
 	}
 
 	private void addProgressBar(Composite parent) {
