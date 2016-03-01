@@ -11,8 +11,12 @@ import java.util.function.IntConsumer;
 
 import org.eclipse.core.runtime.IAdaptable;
 import org.eclipse.jface.action.Action;
+import org.eclipse.jface.action.GroupMarker;
+import org.eclipse.jface.action.IMenuListener;
 import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.action.IToolBarManager;
+import org.eclipse.jface.action.MenuManager;
+import org.eclipse.jface.action.Separator;
 import org.eclipse.jface.dialogs.InputDialog;
 import org.eclipse.jface.layout.GridDataFactory;
 import org.eclipse.jface.preference.IPreferenceStore;
@@ -57,6 +61,7 @@ import org.eclipse.swt.widgets.ColorDialog;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Text;
 import org.eclipse.swt.widgets.ToolBar;
@@ -66,6 +71,7 @@ import org.eclipse.ui.IMemento;
 import org.eclipse.ui.IPartListener2;
 import org.eclipse.ui.IPartService;
 import org.eclipse.ui.IViewSite;
+import org.eclipse.ui.IWorkbenchActionConstants;
 import org.eclipse.ui.IWorkbenchPart;
 import org.eclipse.ui.IWorkbenchPartReference;
 import org.eclipse.ui.IWorkbenchWindow;
@@ -415,6 +421,22 @@ public class GrepView extends ViewPart implements IAdaptable {
 				}
 			}
 		});
+		
+		getSite().setSelectionProvider(viewer);
+		MenuManager mm = new MenuManager();
+		mm.setRemoveAllWhenShown(true);
+		mm.addMenuListener(new IMenuListener() {
+			
+			@Override
+			public void menuAboutToShow(IMenuManager manager) {
+				manager.add(new Action("Copy original range") {
+				});
+				manager.add(new GroupMarker(IWorkbenchActionConstants.MB_ADDITIONS));
+			}
+		});
+		Menu contextMenu = mm.createContextMenu(viewer.getControl());
+		viewer.getTextWidget().setMenu(contextMenu);
+		getSite().registerContextMenu(mm, viewer);
 
 		IMenuManager menuManager = getViewSite().getActionBars().getMenuManager();
 		menuManager.add(new Action("Grep") {
@@ -424,12 +446,15 @@ public class GrepView extends ViewPart implements IAdaptable {
 				viewer.getControl().setFocus();
 			}
 		});
+		menuManager.add(new Separator());
+
 		csAction = new Action("Case Sensitive", Action.AS_CHECK_BOX) {};
 		csAction.setChecked(initialCaseSensitivity);
 		menuManager.add(csAction);
 		hmAction = new Action("Highlight Multiple", Action.AS_CHECK_BOX) {};
 		hmAction.setChecked(initialHighlightMultiple);
 		menuManager.add(hmAction);
+		menuManager.add(new Separator());
 
 		Action colorAction = new Action("Highlight color...") {
 			@Override
@@ -955,10 +980,13 @@ public class GrepView extends ViewPart implements IAdaptable {
 	private void updateTarget() {
 		IWorkbenchWindow window = getViewSite().getWorkbenchWindow();
 		IEditorPart activeEditor = window.getActivePage().getActiveEditor();
+
+		// first check if the editor can adapt to a grep target
 		IGrepTarget newTarget = (IGrepTarget) activeEditor.getAdapter(IGrepTarget.class);
-		if (newTarget == null && activeEditor instanceof AbstractTextEditor) {
+		// if not, and it's a text editor, use the default implementation
+		if (newTarget == null && activeEditor instanceof AbstractTextEditor)
 			newTarget = new DocumentGrepTarget((AbstractTextEditor) activeEditor);
-		}
+
 		if (newTarget != null) {
 			target = newTarget;
 			targetPart = activeEditor;

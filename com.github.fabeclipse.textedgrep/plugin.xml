@@ -28,6 +28,12 @@
             id="com.github.fabeclipse.textedgrep.OpenGrep"
             name="Grep Text">
       </command>
+      <command
+            categoryId="com.github.fabeclipse.textedgrep.grepCommands"
+            defaultHandler="com.github.fabeclipse.textedgrep.internal.ui.ToUntitledFileCommand"
+            id="com.github.fabeclipse.textedgrep.toUntitledFile"
+            name="To Untitled File">
+      </command>
    </extension>
    <extension
          point="org.eclipse.ui.bindings">
@@ -37,6 +43,29 @@
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
             sequence="M1+M3+G">
       </key>
+   </extension>
+   <extension
+         point="org.eclipse.ui.menus">
+      <menuContribution
+            allPopups="false"
+            locationURI="popup:com.github.fabeclipse.textedgrep.grepview?after=additions">
+         <command
+               commandId="org.eclipse.ui.edit.copy"
+               style="push">
+         </command>
+         <command
+               commandId="com.github.fabeclipse.textedgrep.toUntitledFile"
+               style="push">
+         </command>
+      </menuContribution>
+   </extension>
+   <extension
+         point="org.eclipse.ui.editors.documentProviders">
+      <provider
+            class="org.eclipse.ui.editors.text.TextFileDocumentProvider"
+            id="com.github.fabeclipse.textedgrep.GrepResultUntitledDocumentProvider"
+            inputTypes="com.github.fabeclipse.textedgrep.internal.ui.NonExistingFileEditorInput">
+      </provider>
    </extension>
 
 </plugin>
