@@ -34,6 +34,12 @@
             id="com.github.fabeclipse.textedgrep.toUntitledFile"
             name="To Untitled File">
       </command>
+      <command
+            categoryId="com.github.fabeclipse.textedgrep.grepCommands"
+            defaultHandler="com.github.fabeclipse.textedgrep.internal.ui.CopyOriginalRange"
+            id="com.github.fabeclipse.textedgrep.CopyOriginalRange"
+            name="Copy original range">
+      </command>
    </extension>
    <extension
          point="org.eclipse.ui.bindings">
@@ -50,11 +56,20 @@
             allPopups="false"
             locationURI="popup:com.github.fabeclipse.textedgrep.grepview?after=additions">
          <command
+               commandId="com.github.fabeclipse.textedgrep.toUntitledFile"
+               style="push">
+         </command>
+         <separator
+               name="com.github.fabeclipse.textedgrep.separator1"
+               visible="true">
+         </separator>
+         <command
                commandId="org.eclipse.ui.edit.copy"
                style="push">
          </command>
          <command
-               commandId="com.github.fabeclipse.textedgrep.toUntitledFile"
+               commandId="com.github.fabeclipse.textedgrep.CopyOriginalRange"
+               label="Copy original range"
                style="push">
          </command>
       </menuContribution>

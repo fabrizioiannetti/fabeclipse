@@ -97,4 +97,17 @@ public class DocumentGrepTarget implements IGrepTarget {
 		return document.getLength();
 	}
 	
+	@Override
+	public String getTextBetweenLines(int origStartLine, int origEndLine) {
+		String text = "";
+		try {
+			// include end lines
+			if (origEndLine < document.getNumberOfLines())
+				origEndLine++;
+			text = document.get(document.getLineOffset(origStartLine), document.getLineOfOffset(origEndLine));
+		} catch (BadLocationException e) {
+			// TODO: log
+		}
+		return text;
+	}
 }

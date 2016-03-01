@@ -54,6 +54,7 @@ import org.eclipse.swt.events.MouseEvent;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.graphics.Color;
+import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.RGB;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
@@ -429,8 +430,6 @@ public class GrepView extends ViewPart implements IAdaptable {
 			
 			@Override
 			public void menuAboutToShow(IMenuManager manager) {
-				manager.add(new Action("Copy original range") {
-				});
 				manager.add(new GroupMarker(IWorkbenchActionConstants.MB_ADDITIONS));
 			}
 		});
@@ -1079,5 +1078,25 @@ public class GrepView extends ViewPart implements IAdaptable {
 
 	public void setGrepRegularExpression(String text) {
 		regexEntries.get(0).setRegexpText(text, true);
+	}
+	
+	public IDocument getGrepContentAsDocument() {
+		return viewer.getDocument();
+	}
+	
+	public String getOriginalForCurrentSelection() {
+		String text = "";
+		Point selectedRange = viewer.getSelectedRange();
+		IDocument document = viewer.getDocument();
+		if (selectedRange == null || document == null || grepContext == null)
+			return text;
+		try {
+			int origStartLine = grepContext.getOriginalLine(document.getLineOfOffset(selectedRange.x));
+			int origEndLine   = grepContext.getOriginalLine(document.getLineOfOffset(selectedRange.y));
+			text = grepContext.getTarget().getTextBetweenLines(origStartLine, origEndLine);
+		} catch (BadLocationException e) {
+			// TODO: log
+		}
+		return text;
 	}
 }

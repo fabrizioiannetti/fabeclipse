@@ -6,7 +6,6 @@ import org.eclipse.core.commands.ExecutionException;
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.runtime.IPath;
-import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.ui.IEditorDescriptor;
 import org.eclipse.ui.IEditorInput;
@@ -23,8 +22,7 @@ import org.eclipse.ui.texteditor.AbstractTextEditor;
 
 import com.github.fabeclipse.textedgrep.Activator;
 
-public class ToUntitledFileCommand extends AbstractHandler {
-	private static final int MAX_COPY_TEXT_LENGTH = 10000000; // TODO: this is arbitrary
+public class CopyOriginalRange extends AbstractHandler {
 
 	@Override
 	public Object execute(ExecutionEvent event) throws ExecutionException {
@@ -42,7 +40,6 @@ public class ToUntitledFileCommand extends AbstractHandler {
 		}
 		return null;
 	}
-
 	private void setEditorContentFromGrepView(IWorkbenchPart part, IEditorPart editor) {
 		if (editor instanceof AbstractTextEditor) {
 			AbstractTextEditor textEditor = (AbstractTextEditor) editor;
@@ -50,13 +47,7 @@ public class ToUntitledFileCommand extends AbstractHandler {
 			if (document != null) {
 				if (part instanceof GrepView) {
 					GrepView gv = (GrepView) part;
-					IDocument grepDocument = gv.getGrepContentAsDocument();
-					int len = Math.min(grepDocument.getLength(), MAX_COPY_TEXT_LENGTH);
-					try {
-						document.set(grepDocument.get(0, len));
-					} catch (BadLocationException e) {
-						// TODO: log
-					}
+					document.set(gv.getOriginalForCurrentSelection());
 				}
 			}
 		}

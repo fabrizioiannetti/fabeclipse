@@ -36,4 +36,15 @@ public interface IGrepTarget {
 	public boolean isSame(IWorkbenchPart part);
 	public String getTitle();
 
+	/**
+	 * Get a portion of the original document as text.
+	 * 
+	 * Implementation may decide to return less text than
+	 * requested if deemed too much.
+	 * 
+	 * @param origStartLine start line of the portion (includes this line)
+	 * @param origEndLine end line of the portion (includes this line)
+	 * @since 3.0
+	 */
+	public String getTextBetweenLines(int origStartLine, int origEndLine);
 }
