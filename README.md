@@ -3,7 +3,7 @@ fabeclipse
 
 This project contains eclipse plugins I develop for my pesonal use and that can hopefully be useful for others.
 
-(note: the update site is now at http://fabrizioiannetti.github.io)
+(note: the update site is now at http://fabrizioiannetti.github.io/p2)
 
 TextEditor Grep
 ---------------
