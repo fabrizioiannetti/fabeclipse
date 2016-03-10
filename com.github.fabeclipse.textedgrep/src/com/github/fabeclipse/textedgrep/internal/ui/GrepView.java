@@ -43,6 +43,8 @@ import org.eclipse.swt.custom.CaretEvent;
 import org.eclipse.swt.custom.CaretListener;
 import org.eclipse.swt.custom.LineBackgroundEvent;
 import org.eclipse.swt.custom.LineBackgroundListener;
+import org.eclipse.swt.custom.LineStyleEvent;
+import org.eclipse.swt.custom.LineStyleListener;
 import org.eclipse.swt.custom.StyleRange;
 import org.eclipse.swt.events.KeyAdapter;
 import org.eclipse.swt.events.KeyEvent;
@@ -359,6 +361,37 @@ public class GrepView extends ViewPart implements IAdaptable {
 		cursorLineColor = new Color(parent.getDisplay(), new RGB(200, 200, 0));
 		cursorLinePainter.setHighlightColor(cursorLineColor);
 		viewer.addPainter(cursorLinePainter);
+		viewer.getTextWidget().addLineStyleListener(new LineStyleListener() {
+			StyleRange highlightStyle = new StyleRange();
+			@Override
+			public void lineGetStyle(LineStyleEvent event) {
+				IGrepContext grc = grepContext;
+				if (grc != null) {
+					final IDocument document = viewer.getDocument();
+					if (document.getLength() == 0)
+						return;
+					try {
+						// TODO: optimise this, maybe a single call into the target context?
+						final int line = document.getLineOfOffset(event.lineOffset);
+						final int n = grc.getNumberOfMatchesForGrepLine(line);
+						final int[] offsets = new int[n * 2];
+						final StyleRange[] styles = new StyleRange[n];
+						highlightStyle.background = highlightColor;
+						for (int i = 0; i < n; i++) {
+							final int mbeg = grc.getMatchBeginForGrepLine(line, i);
+							offsets[i * 2] = mbeg + event.lineOffset;
+							offsets[i * 2 + 1] = grc.getMatchEndForGrepLine(line, i) - mbeg;
+							styles[i] = highlightStyle;
+						}
+						event.ranges = offsets;
+						event.styles = styles;
+					} catch (BadLocationException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				}
+			}
+		});
 
 		viewer.getTextWidget().addLineBackgroundListener(new LineBackgroundListener() {
 			@Override
@@ -929,6 +962,10 @@ public class GrepView extends ViewPart implements IAdaptable {
 		if (document.getLength() == 0)
 			return;
 
+		// using line style listener: just refresh the text viewer to
+		// use the new ranges/styles.
+		viewer.refresh();
+/*
 		int lines = document.getNumberOfLines();
 		int j = 0;
 		int totalMatches;
@@ -974,6 +1011,7 @@ public class GrepView extends ViewPart implements IAdaptable {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+*/
 	}
 
 	private void updateTarget() {
