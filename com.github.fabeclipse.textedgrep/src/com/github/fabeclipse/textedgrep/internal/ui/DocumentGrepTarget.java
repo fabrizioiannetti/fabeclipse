@@ -104,7 +104,9 @@ public class DocumentGrepTarget implements IGrepTarget {
 			// include end lines
 			if (origEndLine < document.getNumberOfLines())
 				origEndLine++;
-			text = document.get(document.getLineOffset(origStartLine), document.getLineOfOffset(origEndLine));
+			int start = document.getLineOffset(origStartLine);
+			int end = document.getLineOffset(origEndLine);
+			text = document.get(start, end - start);
 		} catch (BadLocationException e) {
 			// TODO: log
 		}

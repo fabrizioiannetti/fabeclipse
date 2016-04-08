@@ -22,7 +22,7 @@ import org.eclipse.ui.texteditor.AbstractTextEditor;
 
 import com.github.fabeclipse.textedgrep.Activator;
 
-public class CopyOriginalRange extends AbstractHandler {
+public class OriginalRangeToUntitledFile extends AbstractHandler {
 
 	@Override
 	public Object execute(ExecutionEvent event) throws ExecutionException {
@@ -41,14 +41,12 @@ public class CopyOriginalRange extends AbstractHandler {
 		return null;
 	}
 	private void setEditorContentFromGrepView(IWorkbenchPart part, IEditorPart editor) {
-		if (editor instanceof AbstractTextEditor) {
+		if (editor instanceof AbstractTextEditor && part instanceof GrepView) {
 			AbstractTextEditor textEditor = (AbstractTextEditor) editor;
 			IDocument document = textEditor.getDocumentProvider().getDocument(editor.getEditorInput());
 			if (document != null) {
-				if (part instanceof GrepView) {
-					GrepView gv = (GrepView) part;
-					document.set(gv.getOriginalForCurrentSelection());
-				}
+				GrepView gv = (GrepView) part;
+				document.set(gv.getOriginalForCurrentSelection());
 			}
 		}
 	}

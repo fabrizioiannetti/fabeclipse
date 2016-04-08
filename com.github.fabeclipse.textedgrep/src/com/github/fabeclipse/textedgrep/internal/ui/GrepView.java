@@ -1092,8 +1092,8 @@ public class GrepView extends ViewPart implements IAdaptable {
 			return text;
 		try {
 			int origStartLine = grepContext.getOriginalLine(document.getLineOfOffset(selectedRange.x));
-			int origEndLine   = grepContext.getOriginalLine(document.getLineOfOffset(selectedRange.y));
-			text = grepContext.getTarget().getTextBetweenLines(origStartLine, origEndLine);
+			int origEndLine   = grepContext.getOriginalLine(document.getLineOfOffset(selectedRange.x + selectedRange.y));
+			text = grepContext.getTarget().getTextBetweenLines(origStartLine, origEndLine + 1);
 		} catch (BadLocationException e) {
 			// TODO: log
 		}
