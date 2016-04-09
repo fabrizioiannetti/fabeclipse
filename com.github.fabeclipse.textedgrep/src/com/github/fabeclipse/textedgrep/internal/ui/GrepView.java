@@ -1091,9 +1091,17 @@ public class GrepView extends ViewPart implements IAdaptable {
 		if (selectedRange == null || document == null || grepContext == null)
 			return text;
 		try {
-			int origStartLine = grepContext.getOriginalLine(document.getLineOfOffset(selectedRange.x));
-			int origEndLine   = grepContext.getOriginalLine(document.getLineOfOffset(selectedRange.x + selectedRange.y));
-			text = grepContext.getTarget().getTextBetweenLines(origStartLine, origEndLine + 1);
+			int startLine = document.getLineOfOffset(selectedRange.x);
+			int endLine   = document.getLineOfOffset(selectedRange.x + selectedRange.y);
+			int origStartLine = grepContext.getOriginalLine(startLine);
+			int origEndLine   = grepContext.getOriginalLine(endLine);
+			text = grepContext.getTarget().getTextBetweenLines(origStartLine, origEndLine);
+			int startDelta = selectedRange.x - document.getLineOffset(startLine);
+			int endDelta   = document.getLineOffset(endLine) + document.getLineLength(endLine) - (selectedRange.x + selectedRange.y);
+			if (startDelta > 0 || endDelta > 0) {
+				System.out.printf("cropping text: startDelta=%d endDelta=%d\n", startDelta, endDelta);
+				text = text.substring(startDelta, text.length() - endDelta);
+			}
 		} catch (BadLocationException e) {
 			// TODO: log
 		}
