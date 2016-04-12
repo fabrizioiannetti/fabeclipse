@@ -69,7 +69,7 @@ public class LargeFileGrepTarget implements IGrepTarget {
 
 	@Override
 	public String getTextBetweenLines(int origStartLine, int origEndLine) {
-		// TODO Auto-generated method stub
-		return "not supported yet";
+		String text = model.getTextBetweenLines(origStartLine, origEndLine);
+		return text;
 	}
 }

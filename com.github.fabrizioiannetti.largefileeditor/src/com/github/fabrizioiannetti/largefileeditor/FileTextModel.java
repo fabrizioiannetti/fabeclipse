@@ -93,14 +93,23 @@ public class FileTextModel {
 	}
 
 	public String getLine(int index) {
-		SeekableByteChannel byteChannel = null;
-		String line = "error";
 		LineOffsets lo = new LineOffsets();
 		getOffsetsForLine(index, lo);
+		long start = lo.start;
+		long end   = lo.end;
+		String line = readRange(start, end);
+		if (line == null)
+			line = "error";
+		return line ;
+	}
+
+	private String readRange(long start, long end) {
+		String line = null;
+		SeekableByteChannel byteChannel = null;
 		try {
 			byteChannel = Files.newByteChannel(textFile.toPath(), StandardOpenOption.READ);
-			byteChannel.position(lo.start);
-			ByteBuffer lineByteBuffer = ByteBuffer.allocate((int) (lo.end - lo.start));
+			byteChannel.position(start);
+			ByteBuffer lineByteBuffer = ByteBuffer.allocate((int) (end - start));
 			int read = byteChannel.read(lineByteBuffer);
 			// do not take line terminator in the line string
 			if (read > 0 && (lineByteBuffer.get(read - 1) == '\n' || lineByteBuffer.get(read - 1) == '\r'))
@@ -120,7 +129,7 @@ public class FileTextModel {
 					e.printStackTrace();
 				}
 		}
-		return line ;
+		return line;
 	}
 
 	public long getLength() {
@@ -285,5 +294,17 @@ lineloop:
 		if (monitor != null)
 			monitor.done();
 		return pos;
+	}
+
+	public String getTextBetweenLines(int startLine, int endLine) {
+		LineOffsets lo = new LineOffsets();
+		getOffsetsForLine(startLine, lo);
+		long start = lo.start;
+		getOffsetsForLine(endLine, lo);
+		long end   = lo.end;
+		String line = readRange(start, end);
+		if (line == null)
+			line = "error";
+		return line ;
 	}
 }
