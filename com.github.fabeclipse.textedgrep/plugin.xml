@@ -40,6 +40,11 @@
             id="com.github.fabeclipse.textedgrep.OriginalRangeToUntitledFile"
             name="Original Range To Untitled File">
       </command>
+      <command
+            defaultHandler="com.github.fabeclipse.textedgrep.internal.ui.CopyOriginalRange"
+            id="com.github.fabeclipse.textedgrep.CopyOriginalRange"
+            name="Copy Original Range">
+      </command>
    </extension>
    <extension
          point="org.eclipse.ui.bindings">
@@ -69,6 +74,10 @@
          </separator>
          <command
                commandId="org.eclipse.ui.edit.copy"
+               style="push">
+         </command>
+         <command
+               commandId="com.github.fabeclipse.textedgrep.CopyOriginalRange"
                style="push">
          </command>
       </menuContribution>
