@@ -18,11 +18,13 @@ public class CopyOriginalRange extends AbstractHandler {
 		IWorkbenchWindow activeWorkbenchWindow = HandlerUtil.getActiveWorkbenchWindow(event);
 		Clipboard clipboard = new Clipboard(activeWorkbenchWindow.getShell().getDisplay());
 		String textData = getContentFromGrepView(part);
-		TextTransfer textTransfer = TextTransfer.getInstance();
-		Transfer[] transfers = new Transfer[]{textTransfer};
-		Object[] data = new Object[]{textData};
-		clipboard.setContents(data, transfers);
-		clipboard.dispose();
+		if (textData != null && !textData.isEmpty()) {
+			TextTransfer textTransfer = TextTransfer.getInstance();
+			Transfer[] transfers = new Transfer[] { textTransfer };
+			Object[] data = new Object[] { textData };
+			clipboard.setContents(data, transfers);
+			clipboard.dispose();
+		}
 		return null;
 	}
 

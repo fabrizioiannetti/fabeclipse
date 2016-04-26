@@ -41,7 +41,6 @@
             name="Original Range To Untitled File">
       </command>
       <command
-            defaultHandler="com.github.fabeclipse.textedgrep.internal.ui.CopyOriginalRange"
             id="com.github.fabeclipse.textedgrep.CopyOriginalRange"
             name="Copy Original Range">
       </command>
@@ -89,6 +88,28 @@
             id="com.github.fabeclipse.textedgrep.GrepResultUntitledDocumentProvider"
             inputTypes="com.github.fabeclipse.textedgrep.internal.ui.NonExistingFileEditorInput">
       </provider>
+   </extension>
+   <extension
+         point="org.eclipse.ui.handlers">
+      <handler
+            class="com.github.fabeclipse.textedgrep.internal.ui.CopyOriginalRange"
+            commandId="com.github.fabeclipse.textedgrep.CopyOriginalRange">
+         <enabledWhen>
+            <test
+                  property="com.github.fabeclipse.textedgrep.GrepView.nonEmptyTextSelection">
+            </test>
+         </enabledWhen>
+      </handler>
+   </extension>
+   <extension
+         point="org.eclipse.core.expressions.propertyTesters">
+      <propertyTester
+            class="com.github.fabeclipse.textedgrep.internal.ui.GrepViewPropertyTester"
+            id="com.github.fabeclipse.textedgrep.GrepViewPropertyTester"
+            namespace="com.github.fabeclipse.textedgrep.GrepView"
+            properties="nonEmptyTextSelection"
+            type="java.lang.Object">
+      </propertyTester>
    </extension>
 
 </plugin>
