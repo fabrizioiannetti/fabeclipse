@@ -1,0 +1,26 @@
+= Changes =
+
+== Enable a command only when necessay == 
+
+It is a good UI rule to disable a command when it is not possible
+to execute it. This should be the case with the copy commands in the
+GrepView in case no text is selected.
+
+So I went for a quest in the wonderful world of eclipse extension points
+to discover that it ain't easy...
+
+=== Commands and handlers ===
+
+My first shot with the pop-up menu in the grep view was to use two extension points:
+
+1. a *menu* to list all commands to be shown in the popup
+2. the *commands* listed above, each pointing to a default handler
+
+when I tried to add some conditions on the command enablement I found out
+that I actually need to define a *handler* for each command and add there the
+enablement clause.
+
+=== Core expressions ===
+
+conditional enablement is achieved using core expressions, which are just a series of nested XML nodes that allow to evaluate and combine some conditions. E.g. there are
+handy pre-defined nodes to check if the current structured selection is empty, 
