@@ -36,7 +36,6 @@
       </command>
       <command
             categoryId="com.github.fabeclipse.textedgrep.grepCommands"
-            defaultHandler="com.github.fabeclipse.textedgrep.internal.ui.OriginalRangeToUntitledFile"
             id="com.github.fabeclipse.textedgrep.OriginalRangeToUntitledFile"
             name="Original Range To Untitled File">
       </command>
@@ -94,6 +93,15 @@
       <handler
             class="com.github.fabeclipse.textedgrep.internal.ui.CopyOriginalRange"
             commandId="com.github.fabeclipse.textedgrep.CopyOriginalRange">
+         <enabledWhen>
+            <test
+                  property="com.github.fabeclipse.textedgrep.GrepView.nonEmptyTextSelection">
+            </test>
+         </enabledWhen>
+      </handler>
+      <handler
+            class="com.github.fabeclipse.textedgrep.internal.ui.OriginalRangeToUntitledFile"
+            commandId="com.github.fabeclipse.textedgrep.OriginalRangeToUntitledFile">
          <enabledWhen>
             <test
                   property="com.github.fabeclipse.textedgrep.GrepView.nonEmptyTextSelection">

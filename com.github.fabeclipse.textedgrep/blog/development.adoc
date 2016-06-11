@@ -22,5 +22,5 @@ enablement clause.
 
 === Core expressions ===
 
-conditional enablement is achieved using core expressions, which are just a series of nested XML nodes that allow to evaluate and combine some conditions. E.g. there are
+Conditional enablement is achieved using core expressions, which are just a series of nested XML nodes that allow to evaluate and combine some conditions. E.g. there are
 handy pre-defined nodes to check if the current structured selection is empty, 
