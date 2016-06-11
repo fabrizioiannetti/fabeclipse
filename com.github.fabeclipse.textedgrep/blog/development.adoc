@@ -14,13 +14,31 @@ to discover that it ain't easy...
 My first shot with the pop-up menu in the grep view was to use two extension points:
 
 1. a *menu* to list all commands to be shown in the popup
-2. the *commands* listed above, each pointing to a default handler
+2. the *commands* listed in the menu above, each pointing to a default handler
 
-when I tried to add some conditions on the command enablement I found out
+but when I tried to add some conditions on the command enable I found out
 that I actually need to define a *handler* for each command and add there the
-enablement clause.
+enabledWhen clause.
 
 === Core expressions ===
 
-conditional enablement is achieved using core expressions, which are just a series of nested XML nodes that allow to evaluate and combine some conditions. E.g. there are
-handy pre-defined nodes to check if the current structured selection is empty, 
+Conditional enable is achieved using core expressions, which are just a
+series of nested XML nodes that allow to evaluate and combine conditions.
+e.g. there are handy pre-defined nodes to check if the current structured
+selection is empty, but it does not work for a text selection.
+
+So I used a test node, which accepts a property name to be evaluated, in this case:
+
+`com.github.fabeclipse.textedgrep.GrepView.nonEmptyTextSelection`
+
+the property is defined by the same grep plugin by extending:
+
+`org.eclipse.core.expressions.propertyTesters`
+
+and defining the property `nonEmptyTextSelection` in the
+`com.github.fabeclipse.textedgrep.GrepView` namespace.
+
+A java class specified in the extension point is then responsible for
+evaluating this property when the framework requests it,
+that is when the menu is about to be displayed and its handler's
+core expression must be computed.

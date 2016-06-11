@@ -58,7 +58,7 @@
          point="org.eclipse.ui.menus">
       <menuContribution
             allPopups="false"
-            locationURI="popup:com.github.fabeclipse.textedgrep.grepview?after=additions">
+            locationURI="popup:com.github.fabeclipse.textedgrep.grepview?after=GrepViewMenu">
          <command
                commandId="com.github.fabeclipse.textedgrep.toUntitledFile"
                style="push">

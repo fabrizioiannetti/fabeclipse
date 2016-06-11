@@ -430,7 +430,7 @@ public class GrepView extends ViewPart implements IAdaptable {
 			
 			@Override
 			public void menuAboutToShow(IMenuManager manager) {
-				manager.add(new GroupMarker(IWorkbenchActionConstants.MB_ADDITIONS));
+				manager.add(new GroupMarker("GrepViewMenu"));
 			}
 		});
 		Menu contextMenu = mm.createContextMenu(viewer.getControl());
