@@ -296,12 +296,12 @@ lineloop:
 		return pos;
 	}
 
-	public String getTextBetweenLines(int startLine, int endLine) {
+	public String getTextBetweenLines(int startLine, int endLine, int startDelta, int endDelta) {
 		LineOffsets lo = new LineOffsets();
 		getOffsetsForLine(startLine, lo);
-		long start = lo.start;
+		long start = lo.start + startDelta;
 		getOffsetsForLine(endLine, lo);
-		long end   = lo.end;
+		long end   = lo.end - endDelta;
 		String line = readRange(start, end);
 		if (line == null)
 			line = "error";

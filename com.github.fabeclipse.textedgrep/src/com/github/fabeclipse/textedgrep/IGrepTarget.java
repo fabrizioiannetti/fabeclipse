@@ -46,5 +46,5 @@ public interface IGrepTarget {
 	 * @param origEndLine end line of the portion (includes this line)
 	 * @since 3.0
 	 */
-	public String getTextBetweenLines(int origStartLine, int origEndLine);
+	public String getTextBetweenLines(int origStartLine, int origEndLine, int origStartOffset, int origEndOffset);
 }

@@ -32,6 +32,7 @@ import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.IFindReplaceTarget;
 import org.eclipse.jface.text.IFindReplaceTargetExtension;
 import org.eclipse.jface.text.IFindReplaceTargetExtension3;
+import org.eclipse.jface.text.TextSelection;
 import org.eclipse.jface.text.TextViewer;
 import org.eclipse.jface.text.source.CompositeRuler;
 import org.eclipse.jface.text.source.LineNumberRulerColumn;
@@ -72,7 +73,6 @@ import org.eclipse.ui.IMemento;
 import org.eclipse.ui.IPartListener2;
 import org.eclipse.ui.IPartService;
 import org.eclipse.ui.IViewSite;
-import org.eclipse.ui.IWorkbenchActionConstants;
 import org.eclipse.ui.IWorkbenchPart;
 import org.eclipse.ui.IWorkbenchPartReference;
 import org.eclipse.ui.IWorkbenchWindow;
@@ -423,7 +423,9 @@ public class GrepView extends ViewPart implements IAdaptable {
 			}
 		});
 		
+		// selection provider
 		getSite().setSelectionProvider(viewer);
+
 		MenuManager mm = new MenuManager();
 		mm.setRemoveAllWhenShown(true);
 		mm.addMenuListener(new IMenuListener() {
@@ -1088,23 +1090,42 @@ public class GrepView extends ViewPart implements IAdaptable {
 		String text = "";
 		Point selectedRange = viewer.getSelectedRange();
 		IDocument document = viewer.getDocument();
-		if (selectedRange == null || document == null || grepContext == null)
+		if (selectedRange == null || document == null || isSelectionEmpty())
 			return text;
 		try {
-			int startLine = document.getLineOfOffset(selectedRange.x);
-			int endLine   = document.getLineOfOffset(selectedRange.x + selectedRange.y);
-			int origStartLine = grepContext.getOriginalLine(startLine);
-			int origEndLine   = grepContext.getOriginalLine(endLine);
-			text = grepContext.getTarget().getTextBetweenLines(origStartLine, origEndLine);
-			int startDelta = selectedRange.x - document.getLineOffset(startLine);
-			int endDelta   = document.getLineOffset(endLine) + document.getLineLength(endLine) - (selectedRange.x + selectedRange.y);
-			if (startDelta > 0 || endDelta > 0) {
-				System.out.printf("cropping text: startDelta=%d endDelta=%d\n", startDelta, endDelta);
-				text = text.substring(startDelta, text.length() - endDelta);
-			}
+			final int selectedRangeStart = selectedRange.x;
+			final int selectedRangeEnd = selectedRangeStart + selectedRange.y;
+			final int startLine = document.getLineOfOffset(selectedRangeStart);
+			final int endLine   = document.getLineOfOffset(selectedRangeEnd);
+			final int origStartLine = grepContext.getOriginalLine(startLine);
+			final int origEndLine   = grepContext.getOriginalLine(endLine);
+			final int startDelta = selectedRangeStart - document.getLineOffset(startLine);
+			final int endDelta   = document.getLineOffset(endLine) + document.getLineLength(endLine) - selectedRangeEnd;
+			text = grepContext.getTarget().getTextBetweenLines(origStartLine, origEndLine, startDelta, endDelta);
+//			if (startDelta > 0 || endDelta > 0) {
+//				System.out.printf("cropping text: startDelta=%d endDelta=%d\n", startDelta, endDelta);
+//				text = text.substring(startDelta, text.length() - endDelta);
+//			}
 		} catch (BadLocationException e) {
 			// TODO: log
 		}
 		return text;
+	}
+
+	public boolean hasGrepResult() {
+		if (viewer == null || grepContext == null)
+			return false;
+		return true;
+	}
+
+	public boolean isSelectionEmpty() {
+		if (viewer == null || grepContext == null)
+			return true;
+		Point range = viewer.getSelectedRange();
+		return range.x < 0 || range.y <= 0;
+	}
+	
+	public Point getSelectedRange() {
+		return viewer.getSelectedRange();
 	}
 }

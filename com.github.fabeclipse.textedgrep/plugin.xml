@@ -23,14 +23,13 @@
       </category>
       <command
             categoryId="org.eclipse.ui.category.textEditor"
-            defaultHandler="com.github.fabeclipse.textedgrep.internal.ui.GrepCommand"
+            defaultHandler="com.github.fabeclipse.textedgrep.internal.ui.cmd.GrepCommand"
             description="Open/Go to grep view"
             id="com.github.fabeclipse.textedgrep.OpenGrep"
             name="Grep Text">
       </command>
       <command
             categoryId="com.github.fabeclipse.textedgrep.grepCommands"
-            defaultHandler="com.github.fabeclipse.textedgrep.internal.ui.ToUntitledFileCommand"
             id="com.github.fabeclipse.textedgrep.toUntitledFile"
             name="To Untitled File">
       </command>
@@ -42,6 +41,10 @@
       <command
             id="com.github.fabeclipse.textedgrep.CopyOriginalRange"
             name="Copy Original Range">
+      </command>
+      <command
+            id="com.github.fabeclipse.textedgrep.copy"
+            name="Copy">
       </command>
    </extension>
    <extension
@@ -71,7 +74,7 @@
                visible="true">
          </separator>
          <command
-               commandId="org.eclipse.ui.edit.copy"
+               commandId="com.github.fabeclipse.textedgrep.copy"
                style="push">
          </command>
          <command
@@ -91,21 +94,51 @@
    <extension
          point="org.eclipse.ui.handlers">
       <handler
-            class="com.github.fabeclipse.textedgrep.internal.ui.CopyOriginalRange"
+            class="com.github.fabeclipse.textedgrep.internal.ui.cmd.CopyOriginalRange"
             commandId="com.github.fabeclipse.textedgrep.CopyOriginalRange">
          <enabledWhen>
-            <test
-                  property="com.github.fabeclipse.textedgrep.GrepView.nonEmptyTextSelection">
-            </test>
+            <with
+                  variable="activePart">
+               <test
+                     property="com.github.fabeclipse.textedgrep.GrepView.nonEmptyTextSelection">
+               </test>
+            </with>
          </enabledWhen>
       </handler>
       <handler
-            class="com.github.fabeclipse.textedgrep.internal.ui.OriginalRangeToUntitledFile"
+            class="com.github.fabeclipse.textedgrep.internal.ui.cmd.OriginalRangeToUntitledFile"
             commandId="com.github.fabeclipse.textedgrep.OriginalRangeToUntitledFile">
          <enabledWhen>
-            <test
-                  property="com.github.fabeclipse.textedgrep.GrepView.nonEmptyTextSelection">
-            </test>
+            <with
+                  variable="activePart">
+               <test
+                     property="com.github.fabeclipse.textedgrep.GrepView.nonEmptyTextSelection">
+               </test>
+            </with>
+         </enabledWhen>
+      </handler>
+      <handler
+            class="com.github.fabeclipse.textedgrep.internal.ui.cmd.Copy"
+            commandId="com.github.fabeclipse.textedgrep.copy">
+         <enabledWhen>
+            <with
+                  variable="activePart">
+               <test
+                     property="com.github.fabeclipse.textedgrep.GrepView.nonEmptyTextSelection">
+               </test>
+            </with>
+         </enabledWhen>
+      </handler>
+      <handler
+            class="com.github.fabeclipse.textedgrep.internal.ui.cmd.ToUntitledFile"
+            commandId="com.github.fabeclipse.textedgrep.toUntitledFile">
+         <enabledWhen>
+            <with
+                  variable="activePart">
+               <test
+                     property="com.github.fabeclipse.textedgrep.GrepView.nonEmptyGrepResult">
+               </test>
+            </with>
          </enabledWhen>
       </handler>
    </extension>
@@ -115,7 +148,7 @@
             class="com.github.fabeclipse.textedgrep.internal.ui.GrepViewPropertyTester"
             id="com.github.fabeclipse.textedgrep.GrepViewPropertyTester"
             namespace="com.github.fabeclipse.textedgrep.GrepView"
-            properties="nonEmptyTextSelection"
+            properties="nonEmptyTextSelection,nonEmptyGrepResult"
             type="java.lang.Object">
       </propertyTester>
    </extension>

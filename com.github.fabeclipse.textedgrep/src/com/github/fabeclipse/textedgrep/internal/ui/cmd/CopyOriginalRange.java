@@ -1,4 +1,4 @@
-package com.github.fabeclipse.textedgrep.internal.ui;
+package com.github.fabeclipse.textedgrep.internal.ui.cmd;
 
 import org.eclipse.core.commands.AbstractHandler;
 import org.eclipse.core.commands.ExecutionEvent;
@@ -9,6 +9,8 @@ import org.eclipse.swt.dnd.Transfer;
 import org.eclipse.ui.IWorkbenchPart;
 import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.handlers.HandlerUtil;
+
+import com.github.fabeclipse.textedgrep.internal.ui.GrepView;
 
 public class CopyOriginalRange extends AbstractHandler {
 

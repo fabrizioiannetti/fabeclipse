@@ -98,14 +98,15 @@ public class DocumentGrepTarget implements IGrepTarget {
 	}
 	
 	@Override
-	public String getTextBetweenLines(int origStartLine, int origEndLine) {
+	public String getTextBetweenLines(int origStartLine, int origEndLine,
+			int startDelta, int endDelta) {
 		String text = "";
 		try {
 			// include end lines
 			if (origEndLine < document.getNumberOfLines())
 				origEndLine++;
-			int start = document.getLineOffset(origStartLine);
-			int end = document.getLineOffset(origEndLine);
+			int start = document.getLineOffset(origStartLine) + startDelta;
+			int end = document.getLineOffset(origEndLine) - endDelta;
 			text = document.get(start, end - start);
 		} catch (BadLocationException e) {
 			// TODO: log

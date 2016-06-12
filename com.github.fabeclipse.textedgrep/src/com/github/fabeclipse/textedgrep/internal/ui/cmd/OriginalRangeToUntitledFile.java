@@ -1,4 +1,4 @@
-package com.github.fabeclipse.textedgrep.internal.ui;
+package com.github.fabeclipse.textedgrep.internal.ui.cmd;
 
 import org.eclipse.core.commands.AbstractHandler;
 import org.eclipse.core.commands.ExecutionEvent;
@@ -21,6 +21,8 @@ import org.eclipse.ui.handlers.HandlerUtil;
 import org.eclipse.ui.texteditor.AbstractTextEditor;
 
 import com.github.fabeclipse.textedgrep.Activator;
+import com.github.fabeclipse.textedgrep.internal.ui.GrepView;
+import com.github.fabeclipse.textedgrep.internal.ui.NonExistingFileEditorInput;
 
 public class OriginalRangeToUntitledFile extends AbstractHandler {
 
