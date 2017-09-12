@@ -24,6 +24,8 @@ import org.eclipse.swt.widgets.Sash;
 import org.eclipse.ui.ISharedImages;
 import org.eclipse.ui.PlatformUI;
 
+import plots.coord.IPlottable;
+
 class PlotViewer {
 	final class PlotMouseMoveListener implements MouseMoveListener {
 			private int startx = 0;
@@ -39,8 +41,11 @@ class PlotViewer {
 						int diffx = e.x - startx;
 						if (diffx != 0) {
 							PlotViewer pv = (PlotViewer) e.widget.getData();
-							Rectangle r = new Rectangle(pv.plotRect.x + diffx, pv.plotRect.y, pv.plotRect.width, pv.plotRect.height);
-							pv.modifyPlotRect(r);
+							double dr = pv.rangeEnd - pv.rangeStart;
+							double rr = pv.plotRect.width;
+							double ddiff = ((double) diffx) * dr / rr;
+							pv.setDomainRange(pv.rangeStart - ddiff, pv.rangeEnd - ddiff);
+							rangeChange.accept(pv);
 						}
 						startx = e.x;
 					}
@@ -57,13 +62,19 @@ class PlotViewer {
 	private Action actionZoomOut;
 	private Action actionRemove;
 
+	// current range
+	double rangeStart;
+	double rangeEnd;
+	
 	// model
 	public List<IPlottable> plots = new ArrayList<>();
 	public List<Color> colors = new ArrayList<>();
 	public Rectangle plotRect = new Rectangle(10, 10, 600, 200);
 
 	// others
-	public Consumer<Rectangle> rectChange = r -> {};
+	public Consumer<Rectangle> rectChange   = r -> {};
+	public Consumer<PlotViewer> rangeChange = pv -> {};
+	private Color color;
 
 	public PlotViewer(Composite parent) {
 		createCanvas(parent);
@@ -76,8 +87,13 @@ class PlotViewer {
 		return this;
 	}
 
-	public void addPlot(int[] data) {
-		plots.add(new Plot(data));
+	public PlotViewer onRangeChange(Consumer<PlotViewer> rc) {
+		rangeChange = rc;
+		return this;
+	}
+
+	public void addPlot(IPlottable p) {
+		plots.add(p);
 	}
 
 	public void setPlotRect(Rectangle r) {
@@ -90,9 +106,15 @@ class PlotViewer {
 		}
 	}
 
-	public void setDomainRange(int start, int end) {
-		for (IPlottable p : plots) {
-			p.setDomainRange(start, end);
+	public void setDomainRange(double start, double end) {
+		if (start != rangeStart || end != rangeEnd) {
+			System.out.printf("PlotViewer.setDomainRange(start=%f, end=%f)\n", start, end);
+			rangeStart = start;
+			rangeEnd = end;
+			for (IPlottable p : plots) {
+				p.setDomainRange(start, end);
+			}
+			canvas.redraw();
 		}
 	}
 
@@ -101,20 +123,20 @@ class PlotViewer {
 		rectChange.accept(plotRect);
 	}
 
-	private PlotViewer zoomXAxis(double factor, int x) {
-		Rectangle r = new Rectangle(plotRect.x, plotRect.y, plotRect.width, plotRect.height);
-		r.x = x - (int)((x - r.x) * factor);
-		r.width = (int) (plotRect.width * factor);
-		modifyPlotRect(r);
+	private PlotViewer zoomXAxis(double factor, double x) {
+		double c = x;
+		double start = c - (c - rangeStart) * factor;
+		double end   = c + (rangeEnd - c) * factor;
+		setDomainRange(start, end);
 		return this;
 	}
-	PlotViewer zoomIn(int x) {
-		return zoomXAxis(1.2, x);
+	PlotViewer zoomIn(double centre) {
+		return zoomXAxis(1.2, centre);
 	}
-	PlotViewer zoomOut(int x) {
+	PlotViewer zoomOut(double centre) {
 		if (plotRect.width < 10)
 			return this; // do not zoom too much
-		return zoomXAxis(1/1.2, x);
+		return zoomXAxis(1/1.2, centre);
 	}
 
 	private void fillContextMenu(IMenuManager manager) {
@@ -156,6 +178,8 @@ class PlotViewer {
 		canvas.addPaintListener(PlotViewer::paintPlot);
 		canvas.addMouseMoveListener(new PlotMouseMoveListener());
 		canvas.setData(this);
+		color = new Color(parent.getDisplay(), 255, 255, 255);
+		canvas.setBackground(color);
 		this.canvas = canvas;
 		if (!plots.isEmpty()) {
 			String toolTip = "";
@@ -171,6 +195,8 @@ class PlotViewer {
 				// remove associated sash, if present
 				if (pv.sash != null)
 					pv.sash.dispose();
+				if (color != null && !color.isDisposed())
+					color.dispose();
 			}
 		});
 	}

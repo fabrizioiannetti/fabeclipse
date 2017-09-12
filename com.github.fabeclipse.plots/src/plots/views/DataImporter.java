@@ -8,13 +8,13 @@ import java.util.regex.Pattern;
 
 public class DataImporter {
 
-	private List<int[]> data = new ArrayList<>();
+	private List<double[]> data = new ArrayList<>();
 
 	public int getCount() {
 		return data.size();
 	}
 
-	public int[] getData(int index) {
+	public double[] getData(int index) {
 		return data.get(index);
 	}
 
@@ -96,7 +96,7 @@ public class DataImporter {
 		}
 
 		// merge arrays
-		int[][] data = new int[chunks.length][total];
+		double[][] data = new double[chunks.length][total];
 		int copied = 0;
 		int i = 0;
 		System.out.printf("Data collected: total len=%d (per set)\n", total);

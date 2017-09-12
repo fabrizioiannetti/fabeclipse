@@ -128,9 +128,9 @@ public class ImportDataFromTextDialog extends SelectionStatusDialog {
 				if (input == null)
 					return new String[0];
 				final String[] elements = new String[input.getData(0).length];
-				final int[] data = input.getData(0);
+				final double[] data = input.getData(0);
 				for (int i = 0; i < elements.length; i++) {
-					elements[i] = Integer.toString(data[i]);
+					elements[i] = Double.toString(data[i]);
 				}
 				return elements;
 			}
@@ -204,7 +204,7 @@ public class ImportDataFromTextDialog extends SelectionStatusDialog {
 		
 	}
 
-	public int[] getData() {
+	public double[] getData() {
 		return importer.getData(0);
 	}
 }

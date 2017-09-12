@@ -1,4 +1,4 @@
-package plots.views;
+package plots.attic;
 
 import org.eclipse.swt.graphics.Rectangle;
 

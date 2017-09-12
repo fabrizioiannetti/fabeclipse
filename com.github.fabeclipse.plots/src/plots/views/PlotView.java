@@ -21,6 +21,9 @@ import org.eclipse.swt.widgets.Sash;
 import org.eclipse.ui.IActionBars;
 import org.eclipse.ui.part.ViewPart;
 
+import plots.coord.IPlottable;
+import plots.coord.Plot;
+
 public class PlotView extends ViewPart {
 
 	private static final String PLOT_VIEW_KEY = "plotView";
@@ -32,11 +35,14 @@ public class PlotView extends ViewPart {
 	private Composite parent;
 	private List<PlotViewer> viewers = new ArrayList<>();
 
-	// the global domain range, i.e. the portion of data
-	// to display
-	private int[] xrange = new int[] {0, 0};
 	private float xscale = 1;
 
+	private double domainStart;
+	private double domainEnd;
+
+	private double rangeStart;
+	private double rangeEnd;
+	
 	private Action actionZoomIn;
 	
 	/**
@@ -58,6 +64,10 @@ public class PlotView extends ViewPart {
 		addPlotViewer(parent, demoData());
 		addPlotViewer(parent, demoData());
 
+		rangeStart = domainStart;
+		rangeEnd   = domainEnd;
+		updateDomainRangeAll();
+
 		parent.addMouseWheelListener(PlotView::mouseWheelMoved);
 		// view actions
 		makeActions();
@@ -65,9 +75,9 @@ public class PlotView extends ViewPart {
 	}
 
 	// just for testing purposes
-	private int[] demoData() {
-		int[] vals;
-		vals = new int[1000];
+	private double[] demoData() {
+		double[] vals;
+		vals = new double[1000000];
 		int v = 37;
 		for (int i = 0; i < vals.length; i++) {
 			vals[i] = v;
@@ -76,10 +86,11 @@ public class PlotView extends ViewPart {
 		return vals;
 	}
 
-	private void addPlotViewer(Composite parent, int[] data) {
+	private void addPlotViewer(Composite parent, double[] ds) {
 		Sash sash = null;
 		PlotViewer plotViewer = new PlotViewer(parent);
-		plotViewer.addPlot(data);
+		IPlottable p = new Plot(ds);
+		plotViewer.addPlot(p);
 
 		sash = new Sash(parent, SWT.HORIZONTAL);
 		GridDataFactory.fillDefaults().grab(true, false).hint(SWT.DEFAULT, SASH_HEIGHT).applyTo(sash);
@@ -94,31 +105,41 @@ public class PlotView extends ViewPart {
 			boolean removed = viewers.remove(e.widget.getData());
 			System.out.println("removed viewer :" + removed);
 		});
-		plotViewer.onRectChange(r -> {setAllRects(r); });
-		updateXRange(data);
+		plotViewer.onRangeChange(pv -> {updateDomainRangeAllFrom(pv); });
+		updateDomain(p);
 		parent.redraw();
 		parent.layout();
 	}
 
-	private void updateXRange(int[] data) {
-		// TODO: this should actually look in the domain array...
-		if (xrange[1] < data.length) {
-			xrange[1] = data.length;
-		}
+	private void updateDomainRangeAllFrom(PlotViewer pv) {
+		rangeStart = pv.rangeStart;
+		rangeEnd   = pv.rangeEnd;
+		updateDomainRangeAll();
+	}
+
+	private void updateDomain(IPlottable p) {
+		domainStart = Math.min(domainStart, p.getDomainStart());
+		domainEnd   = Math.max(domainEnd, p.getDomainEnd());
 		updateDomainRangeAll();
 	}
 
 	private void updateDomainRangeAll() {
 		// notify all viewers about the new range
 		for (PlotViewer plotViewer : viewers) {
-			plotViewer.setDomainRange((int)(xrange[0] * xscale), (int)(xrange[1] * xscale));
+			plotViewer.setDomainRange(rangeStart, rangeEnd);
 		}
 	}
 
-	private void setAllRects(Rectangle r) {
-		for (PlotViewer plotViewer : viewers)
-			plotViewer.setPlotRect(r);
+	private void zoomAll(boolean in, double centre) {
+		// notify all viewers about the new range
+		for (PlotViewer plotViewer : viewers) {
+			if (in)
+				plotViewer.zoomIn(centre);
+			else
+				plotViewer.zoomOut(centre);
+		}
 	}
+
 
 	private static void onSashMoved(Event e) {
 		Sash s = (Sash) e.widget;
@@ -142,14 +163,11 @@ public class PlotView extends ViewPart {
 		Composite parent = (Composite) e.widget;
 		PlotView plotView = (PlotView) parent.getData(PLOT_VIEW_KEY);
 		if (plotView != null) {
+			double centre = plotView.rangeStart + (plotView.rangeEnd - plotView.rangeStart)*(parent.getBounds().width - e.x) / parent.getBounds().width;
 			if (e.count > 0)
-				plotView.xscale *= 1.2;  // UP -> zoom in
+				plotView.zoomAll(true, centre);  // UP -> zoom in
 			else
-				plotView.xscale /= 1.2; // DOWN -> zoom out
-			System.out.printf("Update domain to plots: [%d,%d]x%f\n",
-					plotView.xrange[0],
-					plotView.xrange[1], plotView.xscale);
-			plotView.updateDomainRangeAll();
+				plotView.zoomAll(false, centre); // DOWN -> zoom out
 			plotView.parent.redraw();
 		}
 		// find the plot view under the cursor
@@ -188,7 +206,7 @@ public class PlotView extends ViewPart {
 					ImportDataFromTextDialog dialog = new ImportDataFromTextDialog(getSite().getShell());
 					dialog.listOpenEditors(getSite().getWorkbenchWindow());
 					if (dialog.open() == Dialog.OK) {
-						int[] data = dialog.getData();
+						double[] data = dialog.getData();
 						// TODO: option to import into an existing plot
 						addPlotViewer(parent, data);
 						parent.redraw();
@@ -198,9 +216,6 @@ public class PlotView extends ViewPart {
 		actionZoomIn = new LambdaAction("><", "Zoom In",  
 			e -> {
 				xscale *= 1.2;  // UP -> zoom in
-				System.out.printf("Update domain to plots: [%d,%d]x%f\n",
-						xrange[0],
-						xrange[1], xscale);
 				updateDomainRangeAll();
 				parent.redraw();
 				Control[] children = parent.getChildren();

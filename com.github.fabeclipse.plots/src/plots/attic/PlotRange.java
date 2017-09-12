@@ -1,4 +1,4 @@
-package plots.views;
+package plots.attic;
 
 import org.eclipse.swt.graphics.Rectangle;
 
@@ -118,23 +118,23 @@ public class PlotRange {
 		return k;
 	}
 
-	public int getDomainEndIndex(int[] indexes) {
+	public int getDomainEndIndex(int[] domain) {
 		int to = rangeStart + rangeLength;
 		// check if the requested position is outside
 		// the domain
-		if (to <= indexes[0])
+		if (to <= domain[0])
 			return 0;
-		if (to >= indexes[indexes.length - 1])
-			return indexes.length - 1;
+		if (to >= domain[domain.length - 1])
+			return domain.length - 1;
 
 		// TODO: can I use the stdlib binary search here?
 		int i,j, k;
 		i = 0;
-		j = indexes.length;
+		j = domain.length;
 		k = (i + j) / 2;
-		while (!(indexes[k - 1] < to && indexes[k] >= to)) {
+		while (!(domain[k - 1] < to && domain[k] >= to)) {
 			System.out.printf("xend  : check k=%d for vl=%d\n", k, to);
-			if (indexes[k] < to) {
+			if (domain[k] < to) {
 				i = k;
 			} else {
 				j = k;

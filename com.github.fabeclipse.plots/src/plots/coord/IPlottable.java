@@ -1,4 +1,4 @@
-package plots.views;
+package plots.coord;
 
 import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Rectangle;
@@ -9,7 +9,7 @@ public interface IPlottable {
 	 * Plots data in the given rectangle (in GC coordinates).
 	 * 
 	 * The destination rect can also be bigger than the gc
-	 * bunding box, e.g. to show only a subset of the data.
+	 * bunding box, e.g. when drawing only a portion of the plot.
 	 * 
 	 * @param gc the context to draw on
 	 * @param dst bounding box for the plot
@@ -18,7 +18,9 @@ public interface IPlottable {
 
 	int getCount();
 
-	Plot setDomainRange(int start, int end);
+	double getDomainStart();
 
-	Plot setDomainRange(int[] range);
+	double getDomainEnd();
+
+	IPlottable setDomainRange(double start, double end);
 }
