@@ -5,7 +5,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.net.URI;
-import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
@@ -26,8 +25,6 @@ import org.eclipse.swt.events.MouseListener;
 import org.eclipse.swt.events.PaintEvent;
 import org.eclipse.swt.events.PaintListener;
 import org.eclipse.swt.graphics.Image;
-import org.eclipse.swt.graphics.ImageData;
-import org.eclipse.swt.graphics.PaletteData;
 import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
@@ -41,33 +38,36 @@ import org.eclipse.ui.IURIEditorInput;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.part.EditorPart;
 
+import fab.image.viewer.core.ImageFactory;
+import fab.image.viewer.core.ImageFactory.RGBDesc;
+import fab.image.viewer.core.ImageFactory.RawDataFormat;
+
 public class ImageEditor extends EditorPart implements PaintListener {
 
-	private static final int[][] WELL_KNOWN_SIZES = {
-		{ 854, 480 },
-		{ 864, 480 },
-		{ 320, 240 },
-		{ 640, 480 },
-		{ 720, 38 },
-		{ 720, 1280 },
-		{ 1280, 720 },
-		{ 720, 1280-38 },
-		{ 1920, 1080 },
-		{ 1920, 1088 },
-	};
+	private static final int[][] WELL_KNOWN_SIZES = { { 512, 512 }, { 854, 480 }, { 864, 480 }, { 320, 240 },
+			{ 640, 480 }, { 720, 38 }, { 720, 1280 }, { 1280, 720 }, { 720, 1280 - 38 }, { 1920, 1080 },
+			{ 1920, 1088 }, };
 	private Canvas canvas;
 	private MappedByteBuffer buffer;
 
 	private ByteOrder endianess = ByteOrder.LITTLE_ENDIAN;
 
-	private int alphaShift = 24;
-	private int redShift = 16;
-	private int greenShift = 8;
-	private int blueShift = 0;
+	private static final String ALPHA_MODE_AXXX = "Axxx";
+	private static final String ALPHA_MODE_XXXA = "xxxA";
+	private static final String RGB_MODE_RGB = "RGB";
+	private static final String RGB_MODE_RBG = "RBG";
+	private static final String RGB_MODE_GBR = "GBR";
+	private static final String RGB_MODE_GRB = "GRB";
+	private static final String RGB_MODE_BGR = "BGR";
+	private static final String RGB_MODE_BRG = "BRG";
+
+	private String alphaMode = ALPHA_MODE_AXXX;
+	private String rgbMode = RGB_MODE_BGR;
 
 	private Image image;
 	private Label description;
 	private int width = 320;
+	private RawDataFormat format = RawDataFormat.ARGB32;
 	private int bytePerPixel = 4;
 	private boolean swap16 = false;
 	private Text hexDump;
@@ -88,12 +88,11 @@ public class ImageEditor extends EditorPart implements PaintListener {
 	}
 
 	@Override
-	public void init(IEditorSite site, IEditorInput input)
-			throws PartInitException {
+	public void init(IEditorSite site, IEditorInput input) throws PartInitException {
 		setSite(site);
 		setInput(input);
 		setPartName(input.getName());
-		
+
 		if (input instanceof IURIEditorInput) {
 			IURIEditorInput uriInput = (IURIEditorInput) input;
 			URI uri = uriInput.getURI();
@@ -114,29 +113,37 @@ public class ImageEditor extends EditorPart implements PaintListener {
 	private synchronized void createImage() {
 		Display device = getEditorSite().getWorkbenchWindow().getShell().getDisplay();
 
-//		int[] knownSize = isWellKnownSize(size, bytePerPixel);
-//		if (knownSize != null) {
-//			width = knownSize[0];
-//			height = knownSize[1];
-//		}
 		if (width == 0)
 			width = 720;
 		int size = buffer.limit();
 		int height = size / bytePerPixel / width;
-		
+
+		RawDataFormat fmt = format;
+		if (format == RawDataFormat.ARGB32) {
+			// build enum name
+			String fmtName = alphaMode.replace("xxx", rgbMode) + "32";
+			fmt = RawDataFormat.valueOf(fmtName);
+		}
+
+		Image newImage = null;
+		try {
+			newImage = ImageFactory.use(buffer).order(endianess).size(width, height).format(fmt).createSWTImage(device);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
 		// clamp size to used image data
-		
 
-		byte[] data;
-		data = new byte[buffer.limit()];
-		buffer.position(0);
-//		buffer.get(data);
-
-		Image newImage;
-		if (bytePerPixel == 4)
-			newImage = create32bitImage(device, size, height, data);
-		else
-			newImage = create16bitImage(device, size, height, data);
+		// byte[] data;
+		// data = new byte[buffer.limit()];
+		// buffer.position(0);
+		//// buffer.get(data);
+		//
+		// if (bytePerPixel == 4)
+		// newImage = create32bitImage(device, size, height, data);
+		// else
+		// newImage = create16bitImage(device, size, height, data);
 		if (image != null)
 			image.dispose();
 		image = newImage;
@@ -145,49 +152,33 @@ public class ImageEditor extends EditorPart implements PaintListener {
 		updateDescription();
 	}
 
-	private Image create32bitImage(Display device, int size, int height, byte[] data) {
-		buffer.order(endianess);
-		ByteBuffer temp = ByteBuffer.wrap(data);
-		// correct for endianess if necessary
-//		if (!endianess.equals(ByteOrder.nativeOrder())) {
-//			temp.order(ByteOrder.nativeOrder());
-//		}
-		for (int i = 0; i < size; i+=4) {
-			int v = buffer.getInt();
-			if (swap16)
-				v = (v >> 16) & (0x0000FFFF) | (v & (0x0000FFFF)) << 16 ;
-			temp.putInt(v);
-			
-		}
-		int redMask = 0x00FF << (adjustForAlpha(redShift, alphaShift));
-		int greenMask = 0x00FF << (adjustForAlpha(greenShift, alphaShift));
-		int blueMask = 0x00FF << (adjustForAlpha(blueShift, alphaShift));
-		PaletteData pd = new PaletteData(redMask, greenMask, blueMask);
-		ImageData id = new ImageData(width, height, 32, pd, width, data);
-		Image newImage = new Image(device, id);
-		return newImage;
-	}
-
-	private Image create16bitImage(Display device, int size, int height, byte[] data) {
-		// correct for endianess if necessary
-//		if (!endianess.equals(ByteOrder.nativeOrder())) {
-			buffer.order(endianess);
-			ByteBuffer temp = ByteBuffer.wrap(data);
-			temp.order(ByteOrder.nativeOrder());
-			for (int i = 0; i < size; i+=4) {
-				temp.putShort(buffer.getShort());
-			}
-//		}
-		int redMask = maskFor16bit(redShift);
-		int greenMask = maskFor16bit(greenShift);
-		int blueMask = maskFor16bit(blueShift);
-		PaletteData pd = new PaletteData(redMask, greenMask, blueMask);
-		ImageData id = new ImageData(width, height, 16, pd, width, data);
-		Image newImage = new Image(device, id);
-		return newImage;
-	}
-
-
+	/*
+	 * private Image create32bitImage(Display device, int size, int height, byte[]
+	 * data) { buffer.order(endianess); ByteBuffer temp = ByteBuffer.wrap(data); //
+	 * correct for endianess if necessary // if
+	 * (!endianess.equals(ByteOrder.nativeOrder())) { //
+	 * temp.order(ByteOrder.nativeOrder()); // } for (int i = 0; i < size; i += 4) {
+	 * int v = buffer.getInt(); if (swap16) v = (v >> 16) & (0x0000FFFF) | (v &
+	 * (0x0000FFFF)) << 16; temp.putInt(v);
+	 * 
+	 * } int redMask = 0x00FF << (adjustForAlpha(redShift, alphaShift)); int
+	 * greenMask = 0x00FF << (adjustForAlpha(greenShift, alphaShift)); int blueMask
+	 * = 0x00FF << (adjustForAlpha(blueShift, alphaShift)); PaletteData pd = new
+	 * PaletteData(redMask, greenMask, blueMask); ImageData id = new
+	 * ImageData(width, height, 32, pd, width, data); Image newImage = new
+	 * Image(device, id); return newImage; }
+	 * 
+	 * private Image create16bitImage(Display device, int size, int height, byte[]
+	 * data) { // correct for endianess if necessary // if
+	 * (!endianess.equals(ByteOrder.nativeOrder())) { buffer.order(endianess);
+	 * ByteBuffer temp = ByteBuffer.wrap(data); temp.order(ByteOrder.nativeOrder());
+	 * for (int i = 0; i < size; i += 4) { temp.putShort(buffer.getShort()); } // }
+	 * int redMask = maskFor16bit(redShift); int greenMask =
+	 * maskFor16bit(greenShift); int blueMask = maskFor16bit(blueShift); PaletteData
+	 * pd = new PaletteData(redMask, greenMask, blueMask); ImageData id = new
+	 * ImageData(width, height, 16, pd, width, data); Image newImage = new
+	 * Image(device, id); return newImage; }
+	 */
 	@Override
 	public boolean isDirty() {
 		// TODO Auto-generated method stub
@@ -199,60 +190,44 @@ public class ImageEditor extends EditorPart implements PaintListener {
 		return false;
 	}
 
-	private int adjustForAlpha(int cshift, int alpha) {
-		if (cshift < alpha)
-			return cshift;
-		else
-			return cshift + 8; // add alpha channel size
-	}
-
-	private int maskFor16bit(int cshift) {
-		switch (cshift) {
-		case 0: return 0x1F << 0;
-		case 8: return 0x3F << 5;
-		case 16: return 0x1F << 11;
-		}
-		return 0;
-	}
-
+	/*
+	 * private int maskFor16bit(int cshift) { switch (cshift) { case 0: return 0x1F
+	 * << 0; case 8: return 0x3F << 5; case 16: return 0x1F << 11; } return 0; }
+	 */
 	private class RGBAction extends Action {
-		private int rshift;
-		private int gshift;
-		private int bshift;
+
 		public RGBAction(String name) {
 			super(name);
-			rshift = (2 - name.indexOf('R')) * 8;
-			gshift = (2 - name.indexOf('G')) * 8;
-			bshift = (2 - name.indexOf('B')) * 8;
 		}
+
 		@Override
 		public void run() {
-			redShift = rshift;
-			greenShift = gshift;
-			blueShift = bshift;
+			rgbMode = getText();
 			createImage();
 		}
 	}
 
 	private class AlphaAction extends Action {
-		private int shift;
+
 		public AlphaAction(String name) {
 			super(name);
-			shift = (3 - name.indexOf("A")) * 8;
 		}
+
 		@Override
 		public void run() {
-			alphaShift = shift;
+			alphaMode = getText();
 			createImage();
 		}
 	}
-	
+
 	private class EndianAction extends Action {
 		ByteOrder byteOrder;
+
 		public EndianAction(ByteOrder bo) {
 			super(bo.toString());
 			byteOrder = bo;
 		}
+
 		@Override
 		public void run() {
 			endianess = byteOrder;
@@ -262,16 +237,19 @@ public class ImageEditor extends EditorPart implements PaintListener {
 
 	private class SizeAction extends Action {
 		private int w;
+
 		public SizeAction(int width, int height) {
 			super(Integer.toString(width));
 			w = width;
 		}
+
 		@Override
 		public void run() {
 			width = w;
 			createImage();
 		}
 	}
+
 	@Override
 	public void createPartControl(Composite parent) {
 		GridLayoutFactory.fillDefaults().numColumns(2).applyTo(parent);
@@ -282,7 +260,7 @@ public class ImageEditor extends EditorPart implements PaintListener {
 		Action tAction = new Action("Size", IAction.AS_DROP_DOWN_MENU) {
 		};
 		tAction.setMenuCreator(new IMenuCreator() {
-			
+
 			private Menu menu;
 			private MenuManager mm;
 
@@ -290,7 +268,7 @@ public class ImageEditor extends EditorPart implements PaintListener {
 			public Menu getMenu(Menu parent) {
 				return null;
 			}
-			
+
 			@Override
 			public Menu getMenu(Control parent) {
 				if (mm == null) {
@@ -301,7 +279,7 @@ public class ImageEditor extends EditorPart implements PaintListener {
 				}
 				return menu;
 			}
-			
+
 			@Override
 			public void dispose() {
 				mm.dispose();
@@ -315,63 +293,51 @@ public class ImageEditor extends EditorPart implements PaintListener {
 		canvas = new Canvas(parent, SWT.NO_REDRAW_RESIZE | SWT.V_SCROLL);
 		canvas.addPaintListener(this);
 		GridDataFactory.fillDefaults().grab(true, true).applyTo(canvas);
-		
+
 		canvas.addMouseListener(new MouseListener() {
 			@Override
 			public void mouseUp(MouseEvent e) {
 			}
+
 			@Override
 			public void mouseDown(MouseEvent e) {
 				if (e.button == 1) {
 					String hd = String.format("X:%d Y:%d\n", e.x, e.y);
 					int index = (e.x + e.y * width) * bytePerPixel;
-					for (int i = 0 ; i < 16 ; i++) {
+					for (int i = 0; i < 16; i++) {
 						byte v = buffer.get(index + i);
 						hd += String.format("%02x ", v);
 					}
 					hd += "\n";
-					for (int i = 0 ; i < 4 ; i++) {
+					for (int i = 0; i < 4; i++) {
 						int v = buffer.getInt(index + i * 4);
 						hd += String.format("   %08x ", v);
 					}
 					hexDump.setText(hd);
 				}
 			}
+
 			@Override
 			public void mouseDoubleClick(MouseEvent e) {
 			}
 		});
-		
+
 		hexDump = new Text(parent, SWT.MULTI);
 		GridDataFactory.fillDefaults().grab(true, true).applyTo(hexDump);
 
 		MenuManager mm = new MenuManager();
-		mm.add(new RGBAction("RGB"));
-		mm.add(new RGBAction("RBG"));
-		mm.add(new RGBAction("GBR"));
-		mm.add(new RGBAction("GRB"));
-		mm.add(new RGBAction("BGR"));
-		mm.add(new RGBAction("BRG"));
+		mm.add(new RGBAction(RGB_MODE_RGB));
+		mm.add(new RGBAction(RGB_MODE_RBG));
+		mm.add(new RGBAction(RGB_MODE_GBR));
+		mm.add(new RGBAction(RGB_MODE_GRB));
+		mm.add(new RGBAction(RGB_MODE_BGR));
+		mm.add(new RGBAction(RGB_MODE_BRG));
 		mm.add(new Separator());
-		mm.add(new AlphaAction("Axxx"));
-		mm.add(new AlphaAction("xxxA"));
+		mm.add(new AlphaAction(ALPHA_MODE_AXXX));
+		mm.add(new AlphaAction(ALPHA_MODE_XXXA));
 		mm.add(new Separator());
 		mm.add(new EndianAction(ByteOrder.LITTLE_ENDIAN));
 		mm.add(new EndianAction(ByteOrder.BIG_ENDIAN));
-		mm.add(new Action("RGB32") {
-			@Override
-			public void run() {
-				bytePerPixel = 4;
-				createImage();
-			}
-		});
-		mm.add(new Action("RGB16") {
-			@Override
-			public void run() {
-				bytePerPixel = 2;
-				createImage();
-			}
-		});
 		mm.add(new Action("SWAP16") {
 			@Override
 			public void run() {
@@ -379,9 +345,34 @@ public class ImageEditor extends EditorPart implements PaintListener {
 				createImage();
 			}
 		});
+		mm.add(new Separator());
+		mm.add(new Action("RGB32") {
+			@Override
+			public void run() {
+				bytePerPixel = 4;
+				format = RawDataFormat.ARGB32;
+				createImage();
+			}
+		});
+		mm.add(new Action("RGB16") {
+			@Override
+			public void run() {
+				bytePerPixel = 2;
+				format = RawDataFormat.ARGB32;
+				createImage();
+			}
+		});
+		mm.add(new Action("GREY16U") {
+			@Override
+			public void run() {
+				bytePerPixel = 2;
+				format = RawDataFormat.GRAY_U16;
+				createImage();
+			}
+		});
 		Menu menu = mm.createContextMenu(canvas);
 		canvas.setMenu(menu);
-		
+
 		createImage();
 	}
 
@@ -396,6 +387,7 @@ public class ImageEditor extends EditorPart implements PaintListener {
 			image.dispose();
 		super.dispose();
 	}
+
 	@Override
 	public void paintControl(PaintEvent e) {
 		if (image != null && !image.isDisposed())
@@ -403,19 +395,20 @@ public class ImageEditor extends EditorPart implements PaintListener {
 	}
 
 	private void updateDescription() {
-		char[] d = new char[4];
-		d[3 - adjustForAlpha(redShift, alphaShift)/8] = 'R';
-		d[3 - adjustForAlpha(greenShift, alphaShift)/8] = 'G';
-		d[3 - adjustForAlpha(blueShift, alphaShift)/8] = 'B';
-		d[3 - alphaShift/8] = 'A';
-
-		int redMask = 0x00FF << (adjustForAlpha(redShift, alphaShift));
-		int greenMask = 0x00FF << (adjustForAlpha(greenShift, alphaShift));
-		int blueMask = 0x00FF << (adjustForAlpha(blueShift, alphaShift));
-		int alphaMask = 0x00FF << alphaShift;
+		RawDataFormat fmt = format;
+		if (format == RawDataFormat.ARGB32) {
+			// build enum name
+			String fmtName = alphaMode.replace("xxx", rgbMode) + "32";
+			fmt = RawDataFormat.valueOf(fmtName);
+		}
+		RGBDesc rgbDesc = fmt.getRGBDesc();
+		int redMask = 0x00FF << rgbDesc.redShift;
+		int greenMask = 0x00FF << rgbDesc.greenShift;
+		int blueMask = 0x00FF << rgbDesc.blueShift;
+		int alphaMask = 0x00FF << rgbDesc.alphaShift;
 
 		if (description != null && !description.isDisposed()) {
-			String string = "Format: " + new String(d);
+			String string = "Format: " + fmt.name();
 			string += " w:" + width;
 			string += " e:" + endianess;
 			string += " bpp:" + bytePerPixel;
@@ -423,17 +416,8 @@ public class ImageEditor extends EditorPart implements PaintListener {
 			string += String.format("greenMask:%08x ", greenMask);
 			string += String.format("blueMask:%08x ", blueMask);
 			string += String.format("alphaMask:%08x ", alphaMask);
-			string += String.format(" swap16:%b", swap16);
+			string += String.format("swap16:%b", swap16);
 			description.setText(string);
 		}
-	}
-	
-	private int[] isWellKnownSize(int size, int bytePerPixel) {
-		for (int i = 0; i < WELL_KNOWN_SIZES.length ; i++) {
-			int[] dims = WELL_KNOWN_SIZES[i]; 
-			if (dims[0] * dims[1] * bytePerPixel == size)
-				return dims;
-		}
-		return null;
 	}
 }
