@@ -16,14 +16,25 @@ import org.eclipse.swt.graphics.PaletteData;
 public class ImageFactory {
 
 	public static class RGBDesc {
+		public RGBDesc(int redShift, int greenShift, int blueShift) {
+			super();
+			this.alphaShift = 0;
+			this.redShift = redShift;
+			this.greenShift = greenShift;
+			this.blueShift = blueShift;
+			bitWidth = 24;
+		}
+
 		public RGBDesc(int alphaShift, int redShift, int greenShift, int blueShift) {
 			super();
 			this.alphaShift = alphaShift;
 			this.redShift = redShift;
 			this.greenShift = greenShift;
 			this.blueShift = blueShift;
+			bitWidth = 32;
 		}
 
+		public int bitWidth;
 		public int alphaShift;
 		public int redShift;
 		public int greenShift;
@@ -39,6 +50,15 @@ public class ImageFactory {
 		 * 16 bit (unsigned) per pixel, luminance only
 		 */
 		GRAY_U16,
+		/**
+		 * 24 bit per pixel, interleaved. 8 bit per channel.
+		 */
+		RGB24, //
+		RBG24, //
+		GBR24, //
+		GRB24, //
+		BRG24, //
+		BGR24, //
 		/**
 		 * 32 bit per pixel, interleaved. 8 bit per channel.
 		 */
@@ -81,6 +101,11 @@ public class ImageFactory {
 						(3 - name.indexOf('R')) * 8, //
 						(3 - name.indexOf('G')) * 8, //
 						(3 - name.indexOf('B')) * 8));
+			} else if (name.matches("[RGB]{3}24")) {
+				formatDesc.put(df, new RGBDesc( //
+						(2 - name.indexOf('R')) * 8, //
+						(2 - name.indexOf('G')) * 8, //
+						(2 - name.indexOf('B')) * 8));
 			}
 		}
 	}
@@ -111,6 +136,7 @@ public class ImageFactory {
 	public static ImageFactory use(ByteBuffer data) throws IOException {
 		ImageFactory factory = new ImageFactory();
 		factory.data = data.asReadOnlyBuffer();
+		factory.data.rewind();
 		return factory;
 	}
 
@@ -149,7 +175,7 @@ public class ImageFactory {
 		int greenMask = 0x00FF << rgbDesc.greenShift;
 		int blueMask = 0x00FF << rgbDesc.blueShift;
 		PaletteData paletteData = new PaletteData(redMask, greenMask, blueMask);
-		ImageData imageData = new ImageData(width, height, 32, paletteData, width, bytes);
+		ImageData imageData = new ImageData(width, height, rgbDesc.bitWidth, paletteData, width, bytes);
 		Image img = new Image(device, imageData);
 		return img;
 	}

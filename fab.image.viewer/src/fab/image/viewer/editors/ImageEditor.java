@@ -123,6 +123,10 @@ public class ImageEditor extends EditorPart implements PaintListener {
 			// build enum name
 			String fmtName = alphaMode.replace("xxx", rgbMode) + "32";
 			fmt = RawDataFormat.valueOf(fmtName);
+		} else if (format == RawDataFormat.RGB24) {
+			// build enum name
+			String fmtName = rgbMode + "24";
+			fmt = RawDataFormat.valueOf(fmtName);
 		}
 
 		Image newImage = null;
@@ -351,6 +355,14 @@ public class ImageEditor extends EditorPart implements PaintListener {
 			public void run() {
 				bytePerPixel = 4;
 				format = RawDataFormat.ARGB32;
+				createImage();
+			}
+		});
+		mm.add(new Action("RGB24") {
+			@Override
+			public void run() {
+				bytePerPixel = 3;
+				format = RawDataFormat.RGB24;
 				createImage();
 			}
 		});

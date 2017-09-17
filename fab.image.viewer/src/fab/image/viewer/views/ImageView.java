@@ -1,8 +1,7 @@
 package fab.image.viewer.views;
 
 import java.io.IOException;
-import java.nio.file.FileSystems;
-import java.nio.file.Path;
+import java.nio.ByteBuffer;
 
 import org.eclipse.jface.action.Action;
 import org.eclipse.jface.action.IMenuListener;
@@ -105,9 +104,19 @@ public class ImageView extends ViewPart {
 		hookDoubleClickAction();
 		contributeToActionBars();
 
-		Path rawData = FileSystems.getDefault().getPath("/home/fab/Downloads/lena.raw");
+		// checked pattern in GREY16U format, 512x512 pixels
+		final int width = 512;
+		final int height = 512;
+		byte[] data = new byte[width * height * 2];
+		ByteBuffer byteBuffer = ByteBuffer.wrap(data);
+		for (int y = 0; y < height; y++) {
+			for (int x = 0; x < width; x++) {
+				short value = ((x & 32) == 0) && ((y & 32) == 0) ? 0 : (short) -1;
+				byteBuffer.putShort(value);
+			}
+		}
 		try {
-			Image img = ImageFactory.loadRawData(rawData).size(512, 512).format(RawDataFormat.GRAY_U16)
+			Image img = ImageFactory.use(byteBuffer).size(512, 512).format(RawDataFormat.GRAY_U16)
 					.createSWTImage(parent.getDisplay());
 			imageButton.setImage(img);
 		} catch (IOException e) {
