@@ -407,29 +407,37 @@ public class ImageEditor extends EditorPart implements PaintListener {
 	}
 
 	private void updateDescription() {
+		if (description == null || description.isDisposed())
+			return;
+
 		RawDataFormat fmt = format;
 		if (format == RawDataFormat.ARGB32) {
 			// build enum name
 			String fmtName = alphaMode.replace("xxx", rgbMode) + "32";
 			fmt = RawDataFormat.valueOf(fmtName);
+		} else if (format == RawDataFormat.RGB24) {
+			// build enum name
+			String fmtName = rgbMode + "24";
+			fmt = RawDataFormat.valueOf(fmtName);
 		}
-		RGBDesc rgbDesc = fmt.getRGBDesc();
-		int redMask = 0x00FF << rgbDesc.redShift;
-		int greenMask = 0x00FF << rgbDesc.greenShift;
-		int blueMask = 0x00FF << rgbDesc.blueShift;
-		int alphaMask = 0x00FF << rgbDesc.alphaShift;
+		String string = "Format: " + fmt.name();
+		string += " w:" + width;
+		string += " e:" + endianess;
+		string += " bpp:" + bytePerPixel;
 
-		if (description != null && !description.isDisposed()) {
-			String string = "Format: " + fmt.name();
-			string += " w:" + width;
-			string += " e:" + endianess;
-			string += " bpp:" + bytePerPixel;
+		RGBDesc rgbDesc = fmt.getRGBDesc();
+		if (rgbDesc != null) {
+			int redMask = 0x00FF << rgbDesc.redShift;
+			int greenMask = 0x00FF << rgbDesc.greenShift;
+			int blueMask = 0x00FF << rgbDesc.blueShift;
+			int alphaMask = 0x00FF << rgbDesc.alphaShift;
+
 			string += String.format("redMask:%08x ", redMask);
 			string += String.format("greenMask:%08x ", greenMask);
 			string += String.format("blueMask:%08x ", blueMask);
 			string += String.format("alphaMask:%08x ", alphaMask);
-			string += String.format("swap16:%b", swap16);
-			description.setText(string);
 		}
+		string += String.format("swap16:%b", swap16);
+		description.setText(string);
 	}
 }
