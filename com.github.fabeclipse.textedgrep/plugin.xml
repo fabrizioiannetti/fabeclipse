@@ -10,6 +10,7 @@
       <view
             category="com.github.fabeclipse.textedgrep.fabeclipse"
             class="com.github.fabeclipse.textedgrep.internal.ui.GrepView"
+            icon="icons/grep.png"
             id="com.github.fabeclipse.textedgrep.grepview"
             name="Grep"
             restorable="true">
