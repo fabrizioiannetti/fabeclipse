@@ -141,7 +141,7 @@ public class GrepTool {
 			lineNum++;
 			// update progress
 			readChars += line.length() + 1; // assuming 1 char for line terminators
-			int newProgress = (int) (readChars * 100 / targetLen);
+			final int newProgress = (int) (readChars * 100 / targetLen);
 			if (newProgress > progressPercent) {
 				// align with the actual position in grep target
 				// which might be different if the document has two chars

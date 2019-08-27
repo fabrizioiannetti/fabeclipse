@@ -32,7 +32,6 @@ import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.IFindReplaceTarget;
 import org.eclipse.jface.text.IFindReplaceTargetExtension;
 import org.eclipse.jface.text.IFindReplaceTargetExtension3;
-import org.eclipse.jface.text.TextSelection;
 import org.eclipse.jface.text.TextViewer;
 import org.eclipse.jface.text.source.CompositeRuler;
 import org.eclipse.jface.text.source.LineNumberRulerColumn;
@@ -851,66 +850,6 @@ public class GrepView extends ViewPart implements IAdaptable {
 		viewer.getControl().setEnabled(false);
 	}
 
-/*
-	private int computeRangeCount() {
-		int j = 0;
-		AbstractDocument document = (AbstractDocument) viewer.getDocument();
-		int lines = document.getNumberOfLines();
-		try {
-			int totalMatches = grepContext.getNumberOfMatches();
-			// 1 range for each highlight (background), 1 range for each line (foreground)
-//			int[] ranges = new int[totalMatches*2 + lines*2];
-//			StyleRange[] styles = new StyleRange[totalMatches + lines];
-//			int[] ranges = new int[lines*2];
-//			StyleRange[] styles = new StyleRange[lines];
-			int[] ranges = new int[totalMatches*2];
-			StyleRange[] styles = new StyleRange[totalMatches];
-			// this same style range object is used for all matches
-			// to save some memory, the real ranges are
-			// in the integer arrays
-//			StyleRange[] lineForegroundStyles = new StyleRange[regexEntries.size()];
-//			for (int i = 0; i < lineForegroundStyles.length; i++) {
-//				lineForegroundStyles[i] = new StyleRange();
-//				lineForegroundStyles[i].foreground = regexEntries.get(i).getRegexColor();
-//			}
-//			StyleRange[] matchHighLightStyles = new StyleRange[regexEntries.size()];
-//			for (int i = 0; i < matchHighLightStyles.length; i++) {
-//				matchHighLightStyles[i] = new StyleRange();
-//				matchHighLightStyles[i].foreground = regexEntries.get(i).getRegexColor();
-//				matchHighLightStyles[i].background = highlightColor;
-//			}
-			// this is the range used for all match highlights (background)
-			StyleRange highlightStyle = new StyleRange();
-			highlightStyle.background = highlightColor;
-			for (int i = 0 ; i < lines ; i++) {
-//				ranges[j*2]     = document.getLineOffset(i);
-//				ranges[j*2 + 1] = document.getLineLength(i);
-//				styles[j++]     = lineForegroundStyles[grepContext.getColorForGrepLine(i)];
-				int nm = grepContext.getNumberOfMatchesForGrepLine(i);
-				int lineOffset = document.getLineOffset(i);
-				int grepBegin = grepContext.getMatchBeginForGrepLine(i, 0);
-				if (grepBegin > 0) {
-					// there is a segment
-				}
-				int endOfLastMatch = 0;
-				for (int k = 0 ; k < nm ; k++) {
-					grepBegin = grepContext.getMatchBeginForGrepLine(i, k);
-					if (grepBegin > endOfLastMatch) {
-						// add the range for the text here
-					}
-					ranges[j*2]     = document.getLineOffset(i) + grepBegin;
-					ranges[j*2 + 1] = grepContext.getMatchEndForGrepLine(i, k) - grepContext.getMatchBeginForGrepLine(i, k);
-					styles[j++]     = highlightStyle;
-				}
-			}
-			viewer.getTextWidget().setStyleRanges(ranges, styles);
-		} catch (BadLocationException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		return j;
-	}
-*/
 	/**
 	 * Set the highlight colour for match regions in the text viewer.
 	 * 
@@ -961,9 +900,6 @@ public class GrepView extends ViewPart implements IAdaptable {
 			StyleRange highlightStyle = new StyleRange();
 			highlightStyle.background = highlightColor;
 			for (int i = 0 ; i < lines ; i++) {
-//				ranges[j*2]     = document.getLineOffset(i);
-//				ranges[j*2 + 1] = document.getLineLength(i);
-//				styles[j++]     = lineForegroundStyles[grepContext.getColorForGrepLine(i)];
 				int nm = grepContext.getNumberOfMatchesForGrepLine(i);
 				for (int k = 0 ; k < nm ; k++) {
 					ranges[j*2]     = document.getLineOffset(i) + grepContext.getMatchBeginForGrepLine(i, k);
