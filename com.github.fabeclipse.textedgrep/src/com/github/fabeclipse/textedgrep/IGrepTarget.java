@@ -44,6 +44,8 @@ public interface IGrepTarget {
 	 * 
 	 * @param origStartLine start line of the portion (includes this line)
 	 * @param origEndLine end line of the portion (includes this line)
+	 * @param origStartOffset offset of portion start in first line (0 means from the beginning)
+	 * @param origEndOffset length of endline to include in portion
 	 * @since 3.0
 	 */
 	public String getTextBetweenLines(int origStartLine, int origEndLine, int origStartOffset, int origEndOffset);

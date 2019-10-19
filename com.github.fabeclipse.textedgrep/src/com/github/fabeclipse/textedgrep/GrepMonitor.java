@@ -10,14 +10,8 @@ import java.util.function.IntConsumer;
  */
 public class GrepMonitor {
 
-	private Consumer<IGrepContext> changeFunc = new Consumer<IGrepContext>() {
-		@Override
-		public void accept(IGrepContext t) {}
-	};
-	private IntConsumer progressFunc = new IntConsumer() {
-		@Override
-		public void accept(int value) {}
-	};
+	private Consumer<IGrepContext> changeFunc = t -> {};
+	private IntConsumer progressFunc = value -> {};
 	private boolean canceled;
 
 	public GrepMonitor onChange(Consumer<IGrepContext> changeFunc) {

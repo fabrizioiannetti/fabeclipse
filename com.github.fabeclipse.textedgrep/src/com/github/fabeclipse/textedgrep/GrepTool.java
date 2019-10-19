@@ -18,7 +18,7 @@ import com.github.fabeclipse.textedgrep.internal.core.GrepContext;
  * Class that encapsulate a grep operation using a given regular
  * expression.
  * 
- * Calling {@link #grep(IGrepTarget, boolean)} yelds a result with
+ * Calling {@link #grep(IGrepContext, GrepMonitor, boolean)} yelds a result with
  * the filtered text and information on the source range for each line.
  * 
  * @since 2.0
@@ -29,10 +29,6 @@ public class GrepTool {
 
 	private String[] regexList;
 	private final boolean caseSensitive;
-
-	public GrepTool(String regex, boolean caseSensitive) {
-		this(new String[] {regex }, caseSensitive);
-	}
 
 	public GrepTool(String[] regexList, boolean caseSensitive) {
 		super();
@@ -50,15 +46,6 @@ public class GrepTool {
 	 */
 	public IGrepContext grepStart(IGrepTarget target) {
 		GrepContext grepContext = new GrepContext(target);
-		return grepContext;
-	}
-
-	/**
-	 * @since 3.0
-	 */
-	public IGrepContext grep(IGrepTarget target, boolean multiple) {
-		GrepContext grepContext = new GrepContext(target);
-		grep(grepContext, new GrepMonitor(), multiple);
 		return grepContext;
 	}
 

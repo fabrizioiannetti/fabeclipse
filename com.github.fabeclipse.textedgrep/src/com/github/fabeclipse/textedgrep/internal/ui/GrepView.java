@@ -5,6 +5,7 @@ package com.github.fabeclipse.textedgrep.internal.ui;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.IntConsumer;
@@ -23,6 +24,7 @@ import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.preference.PreferenceConverter;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.resource.JFaceResources;
+import org.eclipse.jface.resource.ResourceLocator;
 import org.eclipse.jface.resource.StringConverter;
 import org.eclipse.jface.text.AbstractDocument;
 import org.eclipse.jface.text.BadLocationException;
@@ -74,6 +76,7 @@ import org.eclipse.ui.IPartService;
 import org.eclipse.ui.IViewSite;
 import org.eclipse.ui.IWorkbenchPart;
 import org.eclipse.ui.IWorkbenchPartReference;
+import org.eclipse.ui.IWorkbenchPartSite;
 import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.actions.ActionFactory;
@@ -133,26 +136,18 @@ public class GrepView extends ViewPart implements IAdaptable {
 				@Override
 				public void accept(final int p) {
 					if (!showProgress) {
-						long elapsed = System.currentTimeMillis() - tic;
+						final long elapsed = System.currentTimeMillis() - tic;
 						if (elapsed > GREP_SHOW_PROGRESS_THRESHOLD_MS &&
 								p < GREP_SHOW_PROGRESS_THRESHOLD_PERCENT) {
 							// seems to take long, enable a progress bar for the user
 							showProgress = true;
-							Display.getDefault().asyncExec(new Runnable() {
-								@Override
-								public void run() {
-									progress.onCancel(monitor);
-									showProgressBar(p);
-								}
+							asyncExec(() -> {
+								progress.onCancel(monitor);
+								showProgressBar(p);
 							});
 						}
 					} else {
-						Display.getDefault().asyncExec(new Runnable() {
-							@Override
-							public void run() {
-								showProgressBar(p);
-							}
-						});
+						asyncExec(() -> showProgressBar(p));
 					}
 				}
 			});
@@ -163,6 +158,12 @@ public class GrepView extends ViewPart implements IAdaptable {
 		void cancel() {
 			monitor.cancel();
 		}
+	}
+
+	private void asyncExec(Runnable runnable) {
+		final IWorkbenchPartSite site = getSite();
+		Display display = site != null ? site.getShell().getDisplay() : Display.getDefault();
+		display.asyncExec(runnable);
 	}
 
 	private ArrayBlockingQueue<GrepOp> grepQueue = new ArrayBlockingQueue<GrepView.GrepOp>(10);
@@ -210,25 +211,20 @@ public class GrepView extends ViewPart implements IAdaptable {
 				grepCurr.set(op);
 				final IGrepContext ctxt = op.getContext();
 				try {
-					if (op.grep())
-						GrepView.this.getSite().getShell().getDisplay().asyncExec(new Runnable() {
-							@Override
-							public void run() {
-								String text = ctxt.getText();
-								viewer.getDocument().set(text);
-								updateHighlightRanges();
-							}
+					if (op.grep()) {
+						asyncExec(() -> {
+							String text = ctxt.getText();
+							viewer.getDocument().set(text);
+							updateHighlightRanges();
 						});
+					}
 				} catch (Exception e) {
 					// grep was interrupted, just go on
 				} finally {
 					grepCurr.set(null);
-					GrepView.this.getSite().getShell().getDisplay().asyncExec(new Runnable() {
-						@Override
-						public void run() {
-							viewer.getControl().setEnabled(true);
-							viewer.getControl().setFocus();
-						}
+					asyncExec(() -> {
+						viewer.getControl().setEnabled(true);
+						viewer.getControl().setFocus();
 					});
 				}
 			}
@@ -544,7 +540,6 @@ public class GrepView extends ViewPart implements IAdaptable {
 		// get the line number ruler color from the editor plugin,
 		// to be consistent with the editor settings.
 		IPreferenceStore store = EditorsUI.getPreferenceStore();
-		final Display display = getViewSite().getShell().getDisplay();
 		store.addPropertyChangeListener(new IPropertyChangeListener() {
 			@Override
 			public void propertyChange(PropertyChangeEvent event) {
@@ -554,12 +549,7 @@ public class GrepView extends ViewPart implements IAdaptable {
 					if (!(value instanceof String))
 						return;
 			        final RGB newLnColor = StringConverter.asRGB((String) value);
-					display.asyncExec(new Runnable() {
-						@Override
-						public void run() {
-							updateLineNumberColor(newLnColor);
-						}
-					});
+					asyncExec(() -> updateLineNumberColor(newLnColor));
 				}
 			}
 		});
@@ -641,8 +631,8 @@ public class GrepView extends ViewPart implements IAdaptable {
 	private void fillActionBar() {
 		IToolBarManager toolBarManager = getViewSite().getActionBars().getToolBarManager();
 		linkToEditorAction = new Action("Link To Editor",Action.AS_CHECK_BOX) {};
-		ImageDescriptor image = Activator.imageDescriptorFromPlugin(Activator.PLUGIN_ID, "icons/synced.gif");
-		linkToEditorAction.setImageDescriptor(image);
+		Optional<ImageDescriptor> image = ResourceLocator.imageDescriptorFromBundle(Activator.PLUGIN_ID, "icons/synced.gif");
+		linkToEditorAction.setImageDescriptor(image.orElse(null));
 		linkToEditorAction.setToolTipText("Sync Grep Content to active editor\nAs soon as an editor is activated its content is filtered");
 		toolBarManager.add(linkToEditorAction);
 

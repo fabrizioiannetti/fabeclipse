@@ -1,6 +1,6 @@
 = Changes =
 
-== Enable a command only when necessay == 
+== Enable a command only when necessay ==
 
 It is a good UI rule to disable a command when it is not possible
 to execute it. This should be the case with the copy commands in the
