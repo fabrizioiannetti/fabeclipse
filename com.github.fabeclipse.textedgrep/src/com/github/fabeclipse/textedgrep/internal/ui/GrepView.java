@@ -912,7 +912,12 @@ public class GrepView extends ViewPart implements IAdaptable {
 		IGrepTarget newTarget = (IGrepTarget) activeEditor.getAdapter(IGrepTarget.class);
 		// if not, and it's a text editor, use the default implementation
 		if (newTarget == null && activeEditor instanceof AbstractTextEditor)
-			newTarget = new DocumentGrepTarget((AbstractTextEditor) activeEditor);
+			try {
+				newTarget = new DocumentGrepTarget((AbstractTextEditor) activeEditor);
+			} catch (BadLocationException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 
 		if (newTarget != null) {
 			target = newTarget;

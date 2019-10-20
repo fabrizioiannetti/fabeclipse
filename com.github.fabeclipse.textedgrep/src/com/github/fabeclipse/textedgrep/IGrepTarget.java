@@ -3,6 +3,7 @@
  */
 package com.github.fabeclipse.textedgrep;
 
+import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.ui.IWorkbenchPart;
 
 /**

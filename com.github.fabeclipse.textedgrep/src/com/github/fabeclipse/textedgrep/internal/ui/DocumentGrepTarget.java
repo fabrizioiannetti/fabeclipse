@@ -1,5 +1,8 @@
 package com.github.fabeclipse.textedgrep.internal.ui;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.DocumentEvent;
 import org.eclipse.jface.text.IDocument;
@@ -23,14 +26,24 @@ public class DocumentGrepTarget implements IGrepTarget {
 	private final IDocument document;
 	int lineIndex = -1;
 	private AbstractTextEditor editor;
+	private final int startLine;
+	private final int endLine;
+	private final long length;
 	
-	public DocumentGrepTarget(AbstractTextEditor textEd) {
+	public DocumentGrepTarget(AbstractTextEditor textEd) throws BadLocationException {
 		this(textEd.getDocumentProvider().getDocument(textEd.getEditorInput()));
 		editor = textEd;
 	}
 
-	public DocumentGrepTarget(IDocument document) {
+	public DocumentGrepTarget(IDocument document) throws BadLocationException {
+		this(document, 0, document.getNumberOfLines());
+	}
+
+	public DocumentGrepTarget(IDocument document, int startLine, int endLine) throws BadLocationException {
 		this.document = document;
+		this.startLine = startLine;
+		this.endLine = endLine;
+		this.length = document.getLineOffset(endLine - 1) - document.getLineOffset(startLine);
 		// TODO: add a document listener, this should update
 		// grep results
 		document.addDocumentListener(new IDocumentListener() {
@@ -43,9 +56,27 @@ public class DocumentGrepTarget implements IGrepTarget {
 		});
 	}
 
+	public static List<IGrepTarget> partitioned(IDocument document, final int numPartitions) throws BadLocationException {
+		List<IGrepTarget> targets = new ArrayList<>();
+		final int length = document.getLength();
+		final int partitionLen = length / numPartitions;
+		int[] partitionBoundaries = new int[numPartitions + 1];
+		for (int i = 0; i < numPartitions; i++) {
+			final int line = document.getLineOfOffset(i * partitionLen);
+			partitionBoundaries[i] = line;
+		}
+		partitionBoundaries[numPartitions] = document.getNumberOfLines();
+		for (int i = 0; i < numPartitions; i++) {
+			int endLine = partitionBoundaries[i + 1];
+			int startLine = partitionBoundaries[i];
+			targets.add(new DocumentGrepTarget(document, startLine, endLine));
+		}
+		return targets;
+	}
+
 	@Override
 	public void start() {
-		lineIndex = 0;
+		lineIndex = startLine;
 	}
 	@Override
 	public void stop() {
@@ -53,7 +84,7 @@ public class DocumentGrepTarget implements IGrepTarget {
 	}
 	@Override
 	public boolean hasNextLine() {
-		return lineIndex < document.getNumberOfLines();
+		return lineIndex < endLine;
 	}
 
 	@Override
@@ -94,7 +125,7 @@ public class DocumentGrepTarget implements IGrepTarget {
 
 	@Override
 	public long getLength() {
-		return document.getLength();
+		return length;
 	}
 	
 	@Override

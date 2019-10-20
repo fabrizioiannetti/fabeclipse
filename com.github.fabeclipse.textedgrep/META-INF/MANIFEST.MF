@@ -21,3 +21,6 @@ Import-Package: org.eclipse.core.filesystem,
  org.eclipse.ui.editors.text,
  org.eclipse.ui.texteditor
 Bundle-ActivationPolicy: lazy
+Bundle-ClassPath: .,
+ lib/test/lttng-ust-agent-common-2.10.3.jar,
+ lib/test/lttng-ust-agent-jul-2.10.3.jar
