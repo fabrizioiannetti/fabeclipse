@@ -26,27 +26,20 @@ class PerfGrep {
 	private static final int THREADING_TEST_REPETITIONS = 20;
 	private static final String THREADING_TEST_LINE   = "[00000000][WARN][MAIN] This is the only line, repeated multiple times";
 	private static final String THREADING_TEST_LINE2  = "[00000000][WARN] This is the non-matching line, repeated multiple times";
-	private static final String THREADING_TEST_REGEX = "\\[(\\d+)\\]\\[(\\w+)\\]\\[(\\w+)\\]";
-	private static Logger logger;
-	private static Handler lttngUstLogHandler;
+	private static final String THREADING_TEST_REGEX = "\\[(\\d+)\\]\\[(\\w+)\\]\\[(\\w+)\\].*repeated";
+	private static TestLttngLogger logger;
 	
 	@BeforeAll
-    public static void setup() throws SecurityException, IOException
+    static private void setup()
     {
-        logger = Logger.getLogger("perfgrep");
-
-        lttngUstLogHandler = new LttngLogHandler();
-
-        // Add the LTTng-UST log handler to our logger
-        logger.addHandler(lttngUstLogHandler);
+        logger = new TestLttngLogger();
     }
-	
+
 	@AfterAll
-	static void teardown() {
-		// Not mandatory, but cleaner
-		logger.removeHandler(lttngUstLogHandler);
-		lttngUstLogHandler.close();
+	static private void teardown() {
+		logger.teardown();
 	}
+
 	private static class TestGrepTarget implements IGrepTarget {
 		private int currLine = 0;
 		private int numLines;
@@ -91,7 +84,7 @@ class PerfGrep {
 		System.out.println("Elapsed: " + toc + "ms");
 	}
 
-	static private class GrepRunner implements Runnable {
+	private class GrepRunner implements Runnable {
 		private final GrepTool tool;
 		private final IGrepTarget target;
 		private final int repetitions;
@@ -113,7 +106,7 @@ class PerfGrep {
 	        logger.info("stop");
 		}
 	}
-	static private class GrepRunnerPool {
+	private class GrepRunnerPool {
 		private GrepRunner[] runners;
 		private Thread[] threads;
 		public GrepRunnerPool(int numThreads, int numLines) {
