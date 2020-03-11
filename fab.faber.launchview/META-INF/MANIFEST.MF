@@ -1,0 +1,13 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: Launchview
+Bundle-SymbolicName: fab.faber.launchview;singleton:=true
+Bundle-Version: 1.0.0.qualifier
+Bundle-Vendor: Fabrizio Iannetti
+Require-Bundle: org.eclipse.core.runtime,
+ org.eclipse.ui,
+ org.eclipse.debug.core;bundle-version="3.14.100",
+ org.eclipse.debug.ui;bundle-version="3.14.300"
+Bundle-RequiredExecutionEnvironment: JavaSE-11
+Import-Package: javax.inject
+Automatic-Module-Name: fab.faber.launchview
