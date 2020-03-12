@@ -18,7 +18,6 @@ import org.eclipse.debug.core.ILaunchesListener;
 import org.eclipse.debug.ui.DebugUITools;
 import org.eclipse.debug.ui.IDebugUIConstants;
 import org.eclipse.jface.action.Action;
-import org.eclipse.jface.action.IAction;
 import org.eclipse.jface.action.IMenuListener;
 import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.action.IToolBarManager;
@@ -58,23 +57,22 @@ public class LaunchesView extends ViewPart {
 	private Action runAction;
 	private Action debugAction;
 	private Action pinAction;
+	private Action unpinAction;
 	private Action doubleClickAction;
 	private Action showPinnedOnlyAction;
 
 	private Set<String> pinnedLaunchConfigs = new TreeSet<>();
-
 	private IMemento memento;
-
-	private Action unpinAction;
-
 
 	@Override
 	public void createPartControl(Composite parent) {
-		viewer = new TableViewer(parent, SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL);
+		viewer = new TableViewer(parent, SWT.SINGLE | SWT.H_SCROLL | SWT.V_SCROLL);
 		
 		viewer.setContentProvider(ArrayContentProvider.getInstance());
 		viewer.setInput(new ArrayList<ILaunchConfiguration>());
-		viewer.setLabelProvider(new DecoratingLabelProvider(DebugUITools.newDebugModelPresentation(), PlatformUI.getWorkbench().getDecoratorManager().getLabelDecorator()));
+		viewer.setLabelProvider(new DecoratingLabelProvider(
+				DebugUITools.newDebugModelPresentation(),
+				PlatformUI.getWorkbench().getDecoratorManager().getLabelDecorator()));
 		viewer.setComparator(new ViewerComparator() {
 			@Override
 			public int category(Object element) {
@@ -107,7 +105,6 @@ public class LaunchesView extends ViewPart {
 			public void launchConfigurationChanged(ILaunchConfiguration configuration) {
 				updateLaunchList();
 			}
-			
 			@Override
 			public void launchConfigurationAdded(ILaunchConfiguration configuration) {
 				updateLaunchList();
@@ -190,59 +187,38 @@ public class LaunchesView extends ViewPart {
 	}
 
 	private void makeActions() {
-		runAction = new Action() {
-			public void run() {
-				IStructuredSelection selection = viewer.getStructuredSelection();
-				ILaunchConfiguration configuration = (ILaunchConfiguration) selection.getFirstElement();
-				DebugUITools.launch(configuration, ILaunchManager.RUN_MODE);
-			}
-		};
-		runAction.setText("Run");
-		runAction.setToolTipText("Run the selected launch configuration");
+		ActionFactory af = new ActionFactory();
+		runAction = af.make("Run", "Run the selected launch configuration", () -> {
+			IStructuredSelection selection = viewer.getStructuredSelection();
+			ILaunchConfiguration configuration = (ILaunchConfiguration) selection.getFirstElement();
+			DebugUITools.launch(configuration, ILaunchManager.RUN_MODE);
+		});
 		runAction.setImageDescriptor(DebugUITools.getImageDescriptor(IDebugUIConstants.IMG_ACT_RUN));;
 		
-		debugAction = new Action() {
-			public void run() {
-				ILaunchConfiguration configuration = getSelectedConfiguration();
-				DebugUITools.launch(configuration, ILaunchManager.DEBUG_MODE);
-			}
-		};
-		debugAction.setText("Debug");
-		debugAction.setToolTipText("Debug the selected launch configuration");
+		debugAction = af.make("Debug", "Debug the selected launch configuration", () -> {
+			ILaunchConfiguration configuration = getSelectedConfiguration();
+			DebugUITools.launch(configuration, ILaunchManager.DEBUG_MODE);
+		});
 		debugAction.setImageDescriptor(DebugUITools.getImageDescriptor(IDebugUIConstants.IMG_ACT_DEBUG));;
-		doubleClickAction = new Action() {
-			public void run() {
-				ILaunchConfiguration configuration = getSelectedConfiguration();
-				DebugUITools.openLaunchConfigurationDialog(workbench.getActiveWorkbenchWindow().getShell(), configuration, "org.eclipse.debug.ui.launchGroup.run", null);
-			}
-		};
-		pinAction = new Action() {
-			@Override
-			public void run() {
-				ILaunchConfiguration configuration = getSelectedConfiguration();
-				pinnedLaunchConfigs.add(configuration.getName());
-				viewer.refresh();
-			}
-		};
-		pinAction.setText("Pin");
-		pinAction.setToolTipText("Pin the current launch configuration");
-		unpinAction = new Action() {
-			@Override
-			public void run() {
-				ILaunchConfiguration configuration = getSelectedConfiguration();
-				pinnedLaunchConfigs.remove(configuration.getName());
-				viewer.refresh();
-			}
-		};
-		unpinAction.setText("Unpin");
-		unpinAction.setToolTipText("Unin the current launch configuration");
-		showPinnedOnlyAction = new Action("Show pinned only", IAction.AS_CHECK_BOX) {
-			@Override
-			public void run() {
-				viewer.refresh();
-			}
-		};
-		showPinnedOnlyAction.setChecked(false);
+
+		doubleClickAction = af.make(() -> {
+			ILaunchConfiguration configuration = getSelectedConfiguration();
+			DebugUITools.openLaunchConfigurationDialog(workbench.getActiveWorkbenchWindow().getShell(), configuration, "org.eclipse.debug.ui.launchGroup.run", null);
+		});
+
+		pinAction = af.make("Pin", "Pin the current launch configuration", () -> {
+			ILaunchConfiguration configuration = getSelectedConfiguration();
+			pinnedLaunchConfigs.add(configuration.getName());
+			viewer.refresh();
+		});
+
+		unpinAction = af.make("Unpin", "Unpin the current launch configuration", () -> {
+			ILaunchConfiguration configuration = getSelectedConfiguration();
+			pinnedLaunchConfigs.remove(configuration.getName());
+			viewer.refresh();
+		});
+
+		showPinnedOnlyAction = af.makeChecked("ShowPinnedOnly", "Show only pinned launch configurations", () -> viewer.refresh());
 		if (memento != null) {
 			Boolean value = memento.getBoolean(KEY_SHOW_PINNED_ONLY);
 			if (value != null)
