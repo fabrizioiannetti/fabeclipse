@@ -2,7 +2,6 @@ package fab.faber.launchview.ui;
 
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -13,6 +12,7 @@ import org.eclipse.debug.core.DebugPlugin;
 import org.eclipse.debug.core.ILaunch;
 import org.eclipse.debug.core.ILaunchConfiguration;
 import org.eclipse.debug.core.ILaunchConfigurationListener;
+import org.eclipse.debug.core.ILaunchConfigurationType;
 import org.eclipse.debug.core.ILaunchManager;
 import org.eclipse.debug.core.ILaunchesListener;
 import org.eclipse.debug.ui.DebugUITools;
@@ -25,8 +25,6 @@ import org.eclipse.jface.action.MenuManager;
 import org.eclipse.jface.action.Separator;
 import org.eclipse.jface.viewers.ArrayContentProvider;
 import org.eclipse.jface.viewers.DecoratingLabelProvider;
-import org.eclipse.jface.viewers.DoubleClickEvent;
-import org.eclipse.jface.viewers.IDoubleClickListener;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.viewers.TableViewer;
 import org.eclipse.jface.viewers.Viewer;
@@ -48,11 +46,14 @@ public class LaunchesView extends ViewPart {
 	public static final String ID = "fab.faber.launchview.ui.LaunchesView";
 	
 	private static final String KEY_SHOW_PINNED_ONLY = "showPinnedOnly";
+	private static final String KEY_SHOW_PUBLIC_ONLY = "showPublicOnly";
 	private static final String KEY_PINNED_CONFIGS = "pinnedConfigs";
 	private static final String KEY_NAME = "name";
 
 	@Inject IWorkbench workbench;
 
+	private final ILaunchManager launchManager = DebugPlugin.getDefault().getLaunchManager();
+	
 	private TableViewer viewer;
 	private Action runAction;
 	private Action debugAction;
@@ -60,6 +61,7 @@ public class LaunchesView extends ViewPart {
 	private Action unpinAction;
 	private Action doubleClickAction;
 	private Action showPinnedOnlyAction;
+	private Action showPublicOnlyAction;
 
 	private Set<String> pinnedLaunchConfigs = new TreeSet<>();
 	private IMemento memento;
@@ -67,7 +69,6 @@ public class LaunchesView extends ViewPart {
 	@Override
 	public void createPartControl(Composite parent) {
 		viewer = new TableViewer(parent, SWT.SINGLE | SWT.H_SCROLL | SWT.V_SCROLL);
-		
 		viewer.setContentProvider(ArrayContentProvider.getInstance());
 		viewer.setInput(new ArrayList<ILaunchConfiguration>());
 		viewer.setLabelProvider(new DecoratingLabelProvider(
@@ -96,7 +97,7 @@ public class LaunchesView extends ViewPart {
 		hookDoubleClickAction();
 		contributeToActionBars();
 		updateLaunchList();
-		DebugPlugin.getDefault().getLaunchManager().addLaunchConfigurationListener(new ILaunchConfigurationListener() {
+		launchManager.addLaunchConfigurationListener(new ILaunchConfigurationListener() {
 			@Override
 			public void launchConfigurationRemoved(ILaunchConfiguration configuration) {
 				updateLaunchList();
@@ -110,7 +111,7 @@ public class LaunchesView extends ViewPart {
 				updateLaunchList();
 			}
 		});
-		DebugPlugin.getDefault().getLaunchManager().addLaunchListener(new ILaunchesListener() {
+		launchManager.addLaunchListener(new ILaunchesListener() {
 			
 			@Override
 			public void launchesRemoved(ILaunch[] launches) {
@@ -133,8 +134,17 @@ public class LaunchesView extends ViewPart {
 
 	private void updateLaunchList() {
 		try {
-			ILaunchConfiguration[] launchConfigurations = DebugPlugin.getDefault().getLaunchManager().getLaunchConfigurations();
-			viewer.setInput(Arrays.asList(launchConfigurations));
+			ArrayList<ILaunchConfiguration> configsToShow = new ArrayList<>();
+			ILaunchConfigurationType[] types = launchManager.getLaunchConfigurationTypes();
+			for (ILaunchConfigurationType type : types) {
+				ILaunchConfiguration[] configurations = launchManager.getLaunchConfigurations(type);
+				if (type.isPublic() || !showPublicOnlyAction.isChecked()) {
+					for (ILaunchConfiguration configuration : configurations) {
+						configsToShow.add(configuration);
+					}
+				}
+			}
+			viewer.setInput(configsToShow);
 		} catch (CoreException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -165,6 +175,7 @@ public class LaunchesView extends ViewPart {
 		manager.add(debugAction);
 		manager.add(new Separator());
 		manager.add(showPinnedOnlyAction);
+		manager.add(showPublicOnlyAction);
 	}
 
 	private void fillContextMenu(IMenuManager manager) {
@@ -224,14 +235,17 @@ public class LaunchesView extends ViewPart {
 			if (value != null)
 				showPinnedOnlyAction.setChecked(value);
 		}
+		showPublicOnlyAction = af.makeChecked("ShowPublicOnly", "Show only public launch configurations", () -> updateLaunchList());
+		showPublicOnlyAction.setChecked(true);
+		if (memento != null) {
+			Boolean value = memento.getBoolean(KEY_SHOW_PUBLIC_ONLY);
+			if (value != null)
+				showPublicOnlyAction.setChecked(value);
+		}
 	}
 
 	private void hookDoubleClickAction() {
-		viewer.addDoubleClickListener(new IDoubleClickListener() {
-			public void doubleClick(DoubleClickEvent event) {
-				doubleClickAction.run();
-			}
-		});
+		viewer.addDoubleClickListener(event -> doubleClickAction.run());
 	}
 
 	private ILaunchConfiguration getSelectedConfiguration() {
